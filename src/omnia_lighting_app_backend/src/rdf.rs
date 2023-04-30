@@ -1,18 +1,53 @@
+pub mod connection;
+pub mod uuid;
+
+use std::collections::BTreeMap;
+
 use candid::Nat;
 use ic_cdk::api::{
     management_canister::http_request::{
-        http_request, CanisterHttpRequestArgument, HttpHeader, HttpMethod,
+        http_request, CanisterHttpRequestArgument, HttpHeader, HttpMethod, TransformContext,
     },
     print,
 };
-use omnia_types::errors::GenericError;
-use omnia_utils::uuid::generate_uuid;
+use serde::{Deserialize, Serialize};
 
-use crate::utils::get_rdf_database_connection;
+use crate::outcalls::transform;
 
-pub type Triple = (String, String, String);
+use self::{connection::get_rdf_database_connection, uuid::generate_uuid};
 
-const OMNIA_GRAPH: &str = "omnia:";
+pub type GenericError = String;
+
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct DeviceHeaders {
+    headers: BTreeMap<String, String>,
+}
+
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+struct RdfQueryHead {
+    vars: Vec<String>,
+}
+
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+struct RdfQueryGenericBindingContent {
+    r#type: String,
+    value: String,
+}
+
+type RdfQueryGenericBinding = BTreeMap<String, RdfQueryGenericBindingContent>;
+
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+struct RdfQueryResults {
+    bindings: Vec<RdfQueryGenericBinding>,
+}
+
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+struct RdfQueryResult {
+    head: RdfQueryHead,
+    results: RdfQueryResults,
+}
+
+pub const OMNIA_GRAPH: &str = "omnia:";
 
 /// RDF database graph prefixes:
 /// - **omnia**: <http://rdf.omnia-iot.com#>
@@ -21,6 +56,7 @@ const OMNIA_GRAPH: &str = "omnia:";
 /// - **bot**: <https://w3id.org/bot#>
 /// - **http**: <https://www.w3.org/2011/http#>
 /// - **urn**: `<urn:>`
+/// <br><br>TODO: import them from omnia_backend
 const PREFIXES: &str = r#"
 # Omnia
 PREFIX omnia: <http://rdf.omnia-iot.com#>
@@ -34,7 +70,7 @@ PREFIX td: <https://www.w3.org/2019/wot/td#>
 PREFIX urn: <urn:>
 "#;
 
-const MAX_RESPONSE_BYTES: u64 = 1024; // 1KB
+const MAX_RESPONSE_BYTES: u64 = 2048; // 2KB
 
 fn build_query(q: &str) -> String {
     let mut query = String::from(PREFIXES);
@@ -42,8 +78,11 @@ fn build_query(q: &str) -> String {
     query
 }
 
-async fn send_query(q: String) -> Result<(), GenericError> {
+/// Send query to RDF database using the HTTP outcall.
+pub async fn send_query(q: String) -> Result<String, GenericError> {
     let rdf_base_url = get_rdf_database_connection().base_url;
+
+    let request_body = build_query(&q);
 
     let request_headers = vec![
         HttpHeader {
@@ -57,27 +96,23 @@ async fn send_query(q: String) -> Result<(), GenericError> {
         },
         HttpHeader {
             name: "Content-Type".to_string(),
-            value: "application/sparql-update".to_string(),
+            value: "application/sparql-query".to_string(),
         },
         // the Idempotent-Key is required to avoid flooding the RDF store with the same query from all the replicas
         HttpHeader {
             name: "Idempotent-Key".to_string(),
-            value: generate_uuid().await,
-        },
-        HttpHeader {
-            name: "Authorization".to_string(),
-            value: format!("apikey {}", get_rdf_database_connection().api_key),
+            value: generate_uuid().await.to_string(),
         },
     ];
 
-    let url = format!("{}/update", rdf_base_url);
+    let url = format!("{}/query", rdf_base_url);
 
     let request = CanisterHttpRequestArgument {
         url,
         method: HttpMethod::POST,
-        body: Some(q.as_bytes().to_vec()),
+        body: Some(request_body.as_bytes().to_vec()),
         max_response_bytes: Some(MAX_RESPONSE_BYTES),
-        transform: None,
+        transform: Some(TransformContext::new(transform, vec![])),
         headers: request_headers,
     };
     match http_request(request).await {
@@ -88,7 +123,7 @@ async fn send_query(q: String) -> Result<(), GenericError> {
                 let message =
                     format!("The http_request resulted into success. Response: {response:?}");
                 print(message);
-                Ok(())
+                String::from_utf8(response.body).map_err(|e| e.to_string())
             } else {
                 let message =
                     format!("The http_request resulted into error. Response: {response:?}");
@@ -106,31 +141,27 @@ async fn send_query(q: String) -> Result<(), GenericError> {
     }
 }
 
-/// Insert data in the RDF database.<br>
-/// Available prefixes: [PREFIXES]<br>
-/// TODO: implement nested insert and where conditions
-pub async fn insert(triples: Vec<Triple>) -> Result<(), GenericError> {
-    let mut query = format!("INSERT DATA {{ GRAPH {OMNIA_GRAPH} {{\n");
-    for (s, p, o) in triples {
-        query.push_str(format!("{s} {p} {o} .\n").as_str());
+pub fn parse_rdf_json_response(body: &[u8]) -> Vec<u8> {
+    let json = serde_json::from_slice::<RdfQueryResult>(body).unwrap();
+    let mut r: BTreeMap<String, DeviceHeaders> = BTreeMap::new();
+
+    for binding in json.results.bindings {
+        // TODO: handle unwraps
+        let device_url = binding.get("device").unwrap().value.clone();
+        let header_name = binding.get("headerName").unwrap().value.clone();
+        let header_value = binding.get("headerValue").unwrap().value.clone();
+
+        r.entry(device_url)
+            .and_modify(|e| {
+                e.headers.insert(header_name.clone(), header_value.clone());
+            })
+            .or_insert(DeviceHeaders {
+                headers: BTreeMap::from([(header_name, header_value)]),
+            });
     }
-    query.push_str("} }");
 
-    query = build_query(query.as_str());
-
-    send_query(query).await
-}
-
-/// Delete data from the RDF database.<br>
-/// Available prefixes: [PREFIXES]
-pub async fn delete(triples: Vec<Triple>) -> Result<(), GenericError> {
-    let mut query = format!("DELETE DATA {{ GRAPH {OMNIA_GRAPH} {{\n");
-    for (s, p, o) in triples {
-        query.push_str(format!("{s} {p} {o} .\n").as_str());
-    }
-    query.push_str("} }");
-
-    query = build_query(query.as_str());
-
-    send_query(query).await
+    let mut result = Vec::new();
+    let mut serializer = serde_json::Serializer::new(&mut result);
+    r.serialize(&mut serializer).unwrap();
+    result
 }

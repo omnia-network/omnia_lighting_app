@@ -12,8 +12,8 @@
     "build": "cd src/omnia_lighting_app_frontend && npm run build",
     "prebuild": "npm run generate",
     "start": "cd src/omnia_lighting_app_frontend && npm run dev",
-    "deploy:local": "dfx deploy --network=local",
-    "deploy:ic": "dfx deploy --network=ic",
+    "deploy": "./scripts/deploy.sh",
+    "deploy:backend": "./scripts/deploy.sh --backend",
     "generate": "dfx generate omnia_lighting_app_backend"
   },
   "dependencies": {

@@ -1,3 +1,3 @@
-service : {
-    "greet": (text) -> (text) query;
+service : (text) -> {
+    "get_devices_in_environment": (text) -> (variant { Ok : text; Err : text });
 }
