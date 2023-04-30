@@ -1,0 +1,30 @@
+{
+  "canisters": {
+    "omnia_lighting_app_backend": {
+      "candid": "src/omnia_lighting_app_backend/omnia_lighting_app_backend.did",
+      "package": "omnia_lighting_app_backend",
+      "type": "rust"
+    },
+    "omnia_lighting_app_frontend": {
+      "dependencies": [
+        "omnia_lighting_app_backend"
+      ],
+      "frontend": {
+        "entrypoint": "src/omnia_lighting_app_frontend/src/index.html"
+      },
+      "source": [
+        "src/omnia_lighting_app_frontend/assets",
+        "dist/omnia_lighting_app_frontend/"
+      ],
+      "type": "assets"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}
