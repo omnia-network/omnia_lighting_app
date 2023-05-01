@@ -1,3 +1,6 @@
+type DeviceHeaders = record { headers : vec record { text; text } };
+type WotDevices = vec record { text; DeviceHeaders };
+
 service : (text) -> {
-    "get_devices_in_environment": (text) -> (variant { Ok : text; Err : text });
+    get_devices_in_environment: (text) -> (variant { Ok : WotDevices; Err : text });
 }

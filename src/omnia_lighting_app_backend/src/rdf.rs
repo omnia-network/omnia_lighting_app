@@ -12,16 +12,14 @@ use ic_cdk::api::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::outcalls::transform_rdf_response;
+use crate::{
+    outcalls::transform_rdf_response,
+    wot::{DeviceHeaders, WotDevices},
+};
 
 use self::{connection::get_rdf_database_connection, uuid::generate_uuid};
 
 pub type GenericError = String;
-
-#[derive(Default, Clone, Debug, Serialize, Deserialize)]
-pub struct DeviceHeaders {
-    headers: BTreeMap<String, String>,
-}
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 struct RdfQueryHead {
@@ -80,7 +78,7 @@ fn build_query(q: &str) -> String {
 }
 
 /// Send query to RDF database using the HTTP outcall.
-pub async fn send_query(q: String) -> Result<String, GenericError> {
+pub async fn send_query(q: String) -> Result<WotDevices, GenericError> {
     let rdf_base_url = get_rdf_database_connection().base_url;
 
     let request_body = build_query(&q);
@@ -124,7 +122,9 @@ pub async fn send_query(q: String) -> Result<String, GenericError> {
                 let message =
                     format!("The http_request resulted into success. Response: {response:?}");
                 print(message);
-                String::from_utf8(response.body).map_err(|e| e.to_string())
+                let raw_body = String::from_utf8(response.body).map_err(|e| e.to_string())?;
+
+                serde_json::from_str::<WotDevices>(&raw_body).map_err(|e| e.to_string())
             } else {
                 let message =
                     format!("The http_request resulted into error. Response: {response:?}");
@@ -147,7 +147,7 @@ pub async fn send_query(q: String) -> Result<String, GenericError> {
 /// NOTE: this is specific to the RDF database query for devices.
 pub fn parse_rdf_json_response(body: &[u8]) -> Vec<u8> {
     let json = serde_json::from_slice::<RdfQueryResult>(body).unwrap();
-    let mut r: BTreeMap<String, DeviceHeaders> = BTreeMap::new();
+    let mut r: WotDevices = BTreeMap::new();
 
     for binding in json.results.bindings {
         // TODO: handle unwraps
