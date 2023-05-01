@@ -12,7 +12,7 @@ use ic_cdk::api::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::outcalls::transform;
+use crate::outcalls::transform_rdf_response;
 
 use self::{connection::get_rdf_database_connection, uuid::generate_uuid};
 
@@ -56,7 +56,8 @@ pub const OMNIA_GRAPH: &str = "omnia:";
 /// - **bot**: <https://w3id.org/bot#>
 /// - **http**: <https://www.w3.org/2011/http#>
 /// - **urn**: `<urn:>`
-/// <br><br>TODO: import them from omnia_backend
+///
+/// TODO: import them from omnia_backend
 const PREFIXES: &str = r#"
 # Omnia
 PREFIX omnia: <http://rdf.omnia-iot.com#>
@@ -112,7 +113,7 @@ pub async fn send_query(q: String) -> Result<String, GenericError> {
         method: HttpMethod::POST,
         body: Some(request_body.as_bytes().to_vec()),
         max_response_bytes: Some(MAX_RESPONSE_BYTES),
-        transform: Some(TransformContext::new(transform, vec![])),
+        transform: Some(TransformContext::new(transform_rdf_response, vec![])),
         headers: request_headers,
     };
     match http_request(request).await {
@@ -141,6 +142,9 @@ pub async fn send_query(q: String) -> Result<String, GenericError> {
     }
 }
 
+/// Parse the RDF JSON response into a map of device URLs and their headers.
+///
+/// NOTE: this is specific to the RDF database query for devices.
 pub fn parse_rdf_json_response(body: &[u8]) -> Vec<u8> {
     let json = serde_json::from_slice::<RdfQueryResult>(body).unwrap();
     let mut r: BTreeMap<String, DeviceHeaders> = BTreeMap::new();

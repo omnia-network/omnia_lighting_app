@@ -9,9 +9,9 @@ use ic_cdk::{
 
 use crate::rdf::parse_rdf_json_response;
 
-/// Strips all data that is not needed from the original response.
+/// Use this response transformer when parsing a response from the RDF database.
 #[query]
-pub fn transform(raw: TransformArgs) -> HttpResponse {
+pub fn transform_rdf_response(raw: TransformArgs) -> HttpResponse {
     let mut res = HttpResponse {
         status: raw.response.status.clone(),
         ..Default::default()

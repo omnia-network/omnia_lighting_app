@@ -24,8 +24,8 @@ thread_local! {
     /* stable */ static STATE: RefCell<State>  = RefCell::new(State::default());
 }
 
-// to deploy this canister with the database principal id as init argument, use
-// dfx deploy --argument '("<rdf-database-address>", "<rdf-database-api-key>")'
+// to deploy this canister with the RDF database address as init argument, use
+// dfx deploy --argument '("<rdf-database-address>")'
 #[init]
 fn init(rdf_database_base_url: String) {
     print("Init canister...");
