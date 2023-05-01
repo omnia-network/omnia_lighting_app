@@ -3,4 +3,5 @@ type WotDevices = vec record { text; DeviceHeaders };
 
 service : (text) -> {
     get_devices_in_environment: (text) -> (variant { Ok : WotDevices; Err : text });
+    send_toggle_command_to_device: (text) -> (variant { Ok : null; Err : text });
 }

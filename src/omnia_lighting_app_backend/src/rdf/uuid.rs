@@ -12,7 +12,7 @@ pub async fn generate_uuid() -> Uuid {
 
 /// Get a random number generator based on 'raw_rand'
 ///
-/// TODO: save the rng in shared state, see https://forum.dfinity.org/t/error-e0432-unresolved-import-rand/12190/29
+/// TODO: store the rng in shared state and re-use it, see https://forum.dfinity.org/t/error-e0432-unresolved-import-rand/12190/29
 pub async fn make_rng() -> ChaCha20Rng {
     let raw_rand: Vec<u8> = match call(Principal::management_canister(), "raw_rand", ()).await {
         Ok((res,)) => res,
