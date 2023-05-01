@@ -1,7 +1,7 @@
 {
   "editor.formatOnSave": true,
+  "editor.tabSize": 4,
   "rust-analyzer.linkedProjects": [
-    "./src/omnia_lighting_app_backend/Cargo.toml",
     "./src/omnia_lighting_app_backend/Cargo.toml"
   ]
 }
