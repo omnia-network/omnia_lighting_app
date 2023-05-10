@@ -21,7 +21,7 @@ pub fn transform_rdf_response(raw: TransformArgs) -> HttpResponse {
         res.body = parse_rdf_json_response(&raw.response.body);
     } else {
         print(format!(
-            "Received an error from HTTPS outcall: err = {:?}",
+            "transform_rdf_response: Received an error from HTTPS outcall: err = {:?}",
             raw
         ));
     }
@@ -41,7 +41,7 @@ pub fn transform_device_response(raw: TransformArgs) -> HttpResponse {
         res.body = vec![];
     } else {
         print(format!(
-            "Received an error from HTTPS outcall: err = {:?}",
+            "transform_device_response: Received an error from HTTPS outcall: err = {:?}",
             raw
         ));
     }

@@ -12,7 +12,7 @@ use outcalls::transform_device_response;
 use rdf::uuid::generate_uuid;
 use rdf::{
     connection::{update_rdf_database_connection, RdfDatabaseConnection},
-    send_query, GenericError, OMNIA_GRAPH,
+    send_query, GenericError,
 };
 use serde::Serialize;
 use std::{cell::RefCell, ops::Deref};
@@ -37,9 +37,9 @@ thread_local! {
 // to deploy this canister with the RDF database address as init argument, use
 // dfx deploy --argument '("<rdf-database-address>")'
 #[init]
-fn init(rdf_database_base_url: String) {
+fn init(rdf_database_query_url: String) {
     print("Init canister...");
-    update_rdf_database_connection(rdf_database_base_url);
+    update_rdf_database_connection(rdf_database_query_url);
 }
 
 #[pre_upgrade]
@@ -51,31 +51,29 @@ fn pre_upgrade() {
 }
 
 #[post_upgrade]
-fn post_upgrade(rdf_database_base_url: String) {
+fn post_upgrade(rdf_database_query_url: String) {
     print("Post upgrade canister...");
     STATE.with(|cell| {
         *cell.borrow_mut() =
             ciborium::de::from_reader(StableReader::default()).expect("failed to decode state");
     });
-    update_rdf_database_connection(rdf_database_base_url);
+    update_rdf_database_connection(rdf_database_query_url);
 }
 
 #[update]
 async fn get_devices_in_environment(environment_uid: String) -> Result<WotDevices, GenericError> {
-    let environment_uid = Uuid::parse_str(&environment_uid)
+    let environment_urn = Uuid::parse_str(&environment_uid)
         .map_err(|op| op.to_string())?
         .urn();
     // with this query, we get all the devices in the environment that have the toggle capability
     let query = format!(
         r#"
         SELECT ?device ?headerName ?headerValue WHERE {{
-            GRAPH {OMNIA_GRAPH} {{
-                {environment_uid} bot:hasElement ?device .
-                ?device td:hasActionAffordance saref:ToggleCommand .
-                ?device {OMNIA_GRAPH}requiresHeader ?header .
-                ?header http:fieldName ?headerName ;
-                        http:fieldValue ?headerValue .
-            }}
+            {environment_urn} bot:hasElement ?device .
+            ?device td:hasActionAffordance saref:ToggleCommand .
+            ?device omnia:requiresHeader ?header .
+            ?header http:fieldName ?headerName ;
+                    http:fieldValue ?headerValue .
         }}"#
     );
     let res = send_query(query).await?;
@@ -143,9 +141,9 @@ async fn send_toggle_command_to_device(device_url: DeviceUrl) -> Result<(), Gene
             // needed just to avoid clippy warnings
             #[allow(clippy::cmp_owned)]
             if response.status >= Nat::from(200) && response.status < Nat::from(400) {
-                let message =
-                    format!("The http_request resulted into success. Response: {response:?}");
-                print(message);
+                // let message =
+                //     format!("The http_request resulted into success. Response: {response:?}");
+                // print(message);
                 Ok(())
             } else {
                 let message =

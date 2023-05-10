@@ -5,7 +5,7 @@ use serde::Serialize;
 
 #[derive(Default, CandidType, Serialize, Deserialize, Clone, Debug)]
 pub struct RdfDatabaseConnection {
-    pub base_url: String,
+    pub query_url: String,
 }
 
 use crate::STATE;
@@ -16,9 +16,9 @@ pub fn get_rdf_database_connection() -> RdfDatabaseConnection {
         .expect("No RDF database connection")
 }
 
-pub fn update_rdf_database_connection(rdf_database_base_url: String) {
+pub fn update_rdf_database_connection(rdf_database_query_url: String) {
     let rdf_database_connection = RdfDatabaseConnection {
-        base_url: rdf_database_base_url,
+        query_url: rdf_database_query_url,
     };
 
     print(format!(

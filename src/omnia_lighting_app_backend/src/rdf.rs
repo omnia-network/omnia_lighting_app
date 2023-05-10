@@ -45,8 +45,6 @@ struct RdfQueryResult {
     results: RdfQueryResults,
 }
 
-pub const OMNIA_GRAPH: &str = "omnia:";
-
 /// RDF database graph prefixes:
 /// - **omnia**: <http://rdf.omnia-iot.com#>
 /// - **rdf**: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -79,23 +77,14 @@ fn build_query(q: &str) -> String {
 
 /// Send query to RDF database using the HTTP outcall.
 pub async fn send_query(q: String) -> Result<WotDevices, GenericError> {
-    let rdf_base_url = get_rdf_database_connection().base_url;
+    let url = get_rdf_database_connection().query_url;
 
     let request_body = build_query(&q);
 
     let request_headers = vec![
         HttpHeader {
-            name: "Host".to_string(),
-            // get only the host:port part of the URL
-            value: rdf_base_url.split("://").collect::<Vec<&str>>()[1].to_string(),
-        },
-        HttpHeader {
             name: "User-Agent".to_string(),
-            value: "omnia_backend_canister".to_string(),
-        },
-        HttpHeader {
-            name: "Content-Type".to_string(),
-            value: "application/sparql-query".to_string(),
+            value: "canister_https_outcalls".to_string(),
         },
         // the Idempotent-Key is required to avoid flooding the RDF store with the same query from all the replicas
         HttpHeader {
@@ -103,8 +92,6 @@ pub async fn send_query(q: String) -> Result<WotDevices, GenericError> {
             value: generate_uuid().await.to_string(),
         },
     ];
-
-    let url = format!("{}/query", rdf_base_url);
 
     let request = CanisterHttpRequestArgument {
         url,
@@ -119,9 +106,9 @@ pub async fn send_query(q: String) -> Result<WotDevices, GenericError> {
             // needed just to avoid clippy warnings
             #[allow(clippy::cmp_owned)]
             if response.status >= Nat::from(200) && response.status < Nat::from(400) {
-                let message =
-                    format!("The http_request resulted into success. Response: {response:?}");
-                print(message);
+                // let message =
+                //     format!("The http_request resulted into success. Response: {response:?}");
+                // print(message);
                 let raw_body = String::from_utf8(response.body).map_err(|e| e.to_string())?;
 
                 serde_json::from_str::<WotDevices>(&raw_body).map_err(|e| e.to_string())
