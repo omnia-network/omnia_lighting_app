@@ -1,23 +1,13 @@
-pub mod connection;
-pub mod uuid;
-
 use std::collections::BTreeMap;
 
-use candid::Nat;
-use ic_cdk::api::{
-    management_canister::http_request::{
-        http_request, CanisterHttpRequestArgument, HttpHeader, HttpMethod, TransformContext,
-    },
-    print,
-};
+use candid::Principal;
+use ic_cdk::api::{call::call, print};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    outcalls::transform_rdf_response,
     wot::{DeviceHeaders, WotDevices},
+    STATE,
 };
-
-use self::{connection::get_rdf_database_connection, uuid::generate_uuid};
 
 pub type GenericError = String;
 
@@ -67,73 +57,54 @@ PREFIX td: <https://www.w3.org/2019/wot/td#>
 PREFIX urn: <urn:>
 "#;
 
-const MAX_RESPONSE_BYTES: u64 = 2048; // 2KB
-
 fn build_query(q: &str) -> String {
     let mut query = String::from(PREFIXES);
     query.push_str(q);
     query
 }
 
+pub fn get_omnia_backend_canister_id() -> Principal {
+    STATE
+        .with(|state| state.borrow().omnia_backend_canister_principal)
+        .expect("No Database canister principal")
+}
+
+pub fn update_omnia_backend_canister_id(omnia_backend_canister_id: String) {
+    print(format!(
+        "Omnia Backend canister ID: {:?}",
+        omnia_backend_canister_id
+    ));
+
+    let remote_principal: Principal =
+        Principal::from_text(omnia_backend_canister_id).expect("Invalid Omnia Backend canister ID");
+    STATE.with(|state| {
+        state.borrow_mut().omnia_backend_canister_principal = Some(remote_principal);
+    });
+}
+
 /// Send query to RDF database using the HTTP outcall.
 pub async fn send_query(q: String) -> Result<WotDevices, GenericError> {
-    let url = get_rdf_database_connection().query_url;
+    let sparql_query = build_query(&q);
 
-    let request_body = build_query(&q);
+    let (rdf_db_query_result,): (Result<Vec<u8>, GenericError>,) = call(
+        get_omnia_backend_canister_id(),
+        "executeRdfDbQueryAsUpdate",
+        (sparql_query,),
+    )
+    .await
+    .map_err(|e| format!("Rejection code: {:?}, error {}", e.0, e.1))?;
 
-    let request_headers = vec![
-        HttpHeader {
-            name: "User-Agent".to_string(),
-            value: "canister_https_outcalls".to_string(),
-        },
-        // the Idempotent-Key is required to avoid flooding the RDF store with the same query from all the replicas
-        HttpHeader {
-            name: "Idempotent-Key".to_string(),
-            value: generate_uuid().await.to_string(),
-        },
-    ];
-
-    let request = CanisterHttpRequestArgument {
-        url,
-        method: HttpMethod::POST,
-        body: Some(request_body.as_bytes().to_vec()),
-        max_response_bytes: Some(MAX_RESPONSE_BYTES),
-        transform: Some(TransformContext::new(transform_rdf_response, vec![])),
-        headers: request_headers,
-    };
-    match http_request(request).await {
-        Ok((response,)) => {
-            // needed just to avoid clippy warnings
-            #[allow(clippy::cmp_owned)]
-            if response.status >= Nat::from(200) && response.status < Nat::from(400) {
-                // let message =
-                //     format!("The http_request resulted into success. Response: {response:?}");
-                // print(message);
-                let raw_body = String::from_utf8(response.body).map_err(|e| e.to_string())?;
-
-                serde_json::from_str::<WotDevices>(&raw_body).map_err(|e| e.to_string())
-            } else {
-                let message =
-                    format!("The http_request resulted into error. Response: {response:?}");
-                print(message.clone());
-                Err(message)
-            }
-        }
-        Err((r, m)) => {
-            let message =
-                format!("The http_request resulted into error. RejectionCode: {r:?}, Error: {m}");
-            print(message.clone());
-
-            Err(message)
-        }
+    match rdf_db_query_result {
+        Ok(result) => parse_rdf_json_response(result),
+        Err(err) => Err(err),
     }
 }
 
 /// Parse the RDF JSON response into a map of device URLs and their headers.
 ///
 /// NOTE: this is specific to the RDF database query for devices.
-pub fn parse_rdf_json_response(body: &[u8]) -> Vec<u8> {
-    let json = serde_json::from_slice::<RdfQueryResult>(body).unwrap();
+pub fn parse_rdf_json_response(body: Vec<u8>) -> Result<WotDevices, String> {
+    let json = serde_json::from_slice::<RdfQueryResult>(&body).map_err(|e| e.to_string())?;
     let mut r: WotDevices = BTreeMap::new();
 
     for binding in json.results.bindings {
@@ -151,8 +122,5 @@ pub fn parse_rdf_json_response(body: &[u8]) -> Vec<u8> {
             });
     }
 
-    let mut result = Vec::new();
-    let mut serializer = serde_json::Serializer::new(&mut result);
-    r.serialize(&mut serializer).unwrap();
-    result
+    Ok(r)
 }

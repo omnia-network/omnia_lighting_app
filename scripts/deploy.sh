@@ -2,8 +2,8 @@
 
 source .env
 
-if [ "$RDF_DATABASE_QUERY_URL" = "" ]; then
-  echo "Please provide an RDF database query URL"
+if [ "$OMNIA_BACKEND_CANISTER_ID" = "" ]; then
+  echo "Please provide a valid OMNIA_BACKEND_CANISTER_ID in .env file."
   exit 1
 fi
 
@@ -11,9 +11,9 @@ if [ "$1" = "--backend" ]; then
 
   echo "Deploying only BACKEND canisters..."
 
-  dfx deploy omnia_lighting_app_backend --no-wallet --argument "(\"$RDF_DATABASE_QUERY_URL\")"
+  dfx deploy --network http://localhost:4943 omnia_lighting_app_backend --no-wallet --argument "(\"$OMNIA_BACKEND_CANISTER_ID\")"
 else
   echo "Deploying ALL canisters..."
 
-  dfx deploy --network https://5c86-129-132-41-122.ngrok-free.app --no-wallet --argument "(\"$RDF_DATABASE_QUERY_URL\")"
+  dfx deploy --network http://localhost:4943 --no-wallet --argument "(\"$OMNIA_BACKEND_CANISTER_ID\")"
 fi

@@ -1,4 +1,4 @@
-use candid::{CandidType, Deserialize, Nat};
+use candid::{CandidType, Deserialize, Nat, Principal};
 use ic_cdk::{
     api::{
         management_canister::http_request::{
@@ -9,37 +9,42 @@ use ic_cdk::{
     init, post_upgrade, pre_upgrade, print, update,
 };
 use outcalls::transform_device_response;
-use rdf::uuid::generate_uuid;
-use rdf::{
-    connection::{update_rdf_database_connection, RdfDatabaseConnection},
-    send_query, GenericError,
-};
+use rand::{rngs::StdRng, SeedableRng};
+use random::init_rng;
+use rdf::update_omnia_backend_canister_id;
+use rdf::{send_query, GenericError};
 use serde::Serialize;
 use std::{cell::RefCell, ops::Deref};
 use uuid::Uuid;
 use wot::{DeviceUrl, WotDevices};
 
 mod outcalls;
+mod random;
 mod rdf;
 mod wot;
 
 #[derive(Default, CandidType, Serialize, Deserialize)]
 struct State {
-    pub rdf_database_connection: Option<RdfDatabaseConnection>,
+    pub omnia_backend_canister_principal: Option<Principal>,
 }
 
 thread_local! {
     /* stable */ static STATE: RefCell<State>  = RefCell::new(State::default());
     // we don't need to persist devices in the stable memory
     /* flexible */ static WOT_DEVICES: RefCell<WotDevices> = RefCell::new(WotDevices::default());
+    /* flexible */ static RNG_REF_CELL: RefCell<StdRng> = RefCell::new(SeedableRng::from_seed([0_u8; 32]));
 }
 
 // to deploy this canister with the RDF database address as init argument, use
-// dfx deploy --argument '("<rdf-database-address>")'
+// dfx deploy --argument '("<omnia-backend-canister-id>")'
 #[init]
-fn init(rdf_database_query_url: String) {
+fn init(omnia_backend_canister_id: String) {
     print("Init canister...");
-    update_rdf_database_connection(rdf_database_query_url);
+
+    // initialize rng
+    init_rng();
+
+    update_omnia_backend_canister_id(omnia_backend_canister_id);
 }
 
 #[pre_upgrade]
@@ -51,13 +56,18 @@ fn pre_upgrade() {
 }
 
 #[post_upgrade]
-fn post_upgrade(rdf_database_query_url: String) {
+fn post_upgrade(omnia_backend_canister_id: String) {
     print("Post upgrade canister...");
+
+    // initialize rng
+    init_rng();
+
     STATE.with(|cell| {
         *cell.borrow_mut() =
             ciborium::de::from_reader(StableReader::default()).expect("failed to decode state");
     });
-    update_rdf_database_connection(rdf_database_query_url);
+
+    update_omnia_backend_canister_id(omnia_backend_canister_id);
 }
 
 #[update]
@@ -104,10 +114,10 @@ async fn send_toggle_command_to_device(device_url: DeviceUrl) -> Result<(), Gene
         .collect();
 
     request_headers.push(
-        // the Idempotent-Key is required to avoid flooding the device (aka Gateway) with the same query from all the replicas
+        // the Idempotent-Key is required to avoid flooding the device (hence, the Gateway) with the same query from all the replicas
         HttpHeader {
             name: "Idempotent-Key".to_string(),
-            value: generate_uuid().await.to_string(),
+            value: Uuid::new_v4().to_string(),
         },
     );
 
