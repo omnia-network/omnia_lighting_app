@@ -24,3 +24,6 @@ npm run deploy:backend
 ### Note on frontend
 
 It was bootstrapped with [Vite.js](https://vitejs.dev/) and uses [React](https://reactjs.org/) as a framework. For UI components it uses [Chakra UI](https://chakra-ui.com/).
+
+## License
+Licensed under the [MIT License](./LICENSE).
