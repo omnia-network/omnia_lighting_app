@@ -21,7 +21,8 @@ const App = () => {
         setIsLoading(false);
 
         if ("Ok" in devicesResult) {
-          setFetchedDevices(devicesResult.Ok);
+          // we reverse the array just to have lights in the right order (from first paired to last paired)
+          setFetchedDevices(devicesResult.Ok.reverse());
         } else {
           throw devicesResult.Err;
         }
@@ -87,10 +88,10 @@ const App = () => {
           </VStack>
           : <VStack w="100%" spacing="8">
             <SimpleGrid minChildWidth="10" spacing="4" w="100%">
-              {fetchedDevices.map(([deviceUrl, _]) => (
+              {fetchedDevices.map(([deviceUrl, _], index) => (
                 <Card align="center">
                   <CardHeader>
-                    Light
+                    Light #{index + 1}
                   </CardHeader>
                   <CardBody>
                     <IconButton
