@@ -1,7 +1,40 @@
 type DeviceHeaders = record { headers : vec record { text; text } };
 type WotDevices = vec record { text; DeviceHeaders };
 
-service : (text) -> {
+type LightColorEnum = variant {
+    Red : null;
+    Green : null;
+    Blue : null;
+};
+
+type DeviceCommand = record {
+    device_url : text;
+    schedule_timestamp : nat64;
+    sender : principal;
+    metadata : opt record {
+        light_color : LightColorEnum;
+    };
+    status : variant {
+        Scheduled : null;
+        Running : null;
+        Completed : null;
+        Failed : text;
+    };
+};
+
+type DeviceCommands = record {
+    scheduled_commands : vec record { nat64; DeviceCommand };
+    running_commands : vec record { nat64; DeviceCommand };
+    finished_commands : vec DeviceCommand;
+};
+
+type ScheduleCommandInput = record {
+    device_url : text;
+    light_color : LightColorEnum;
+};
+
+service : (opt text, text) -> {
     get_devices_in_environment: (text) -> (variant { Ok : WotDevices; Err : text });
-    send_toggle_command_to_device: (text) -> (variant { Ok : null; Err : text });
+    schedule_command: (ScheduleCommandInput) -> (variant { Ok : null; Err : text });
+    get_commands: () -> (DeviceCommands);
 }
