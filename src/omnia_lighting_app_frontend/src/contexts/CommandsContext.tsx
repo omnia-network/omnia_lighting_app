@@ -1,21 +1,23 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { DeviceCommands } from "../../../declarations/omnia_lighting_app_backend/omnia_lighting_app_backend.did";
+import { DeviceCommand } from "../../../declarations/omnia_lighting_app_backend/omnia_lighting_app_backend.did";
 import { omnia_lighting_app_backend } from "../../../declarations/omnia_lighting_app_backend";
+import { differenceInMilliseconds } from "date-fns";
+import { getDate } from "../utils/timestamp";
 
 export type CommandsContextType = {
-    commands: DeviceCommands;
-    refreshCommands: () => Promise<void>;
-};
-
-const defaultCommands: DeviceCommands = {
-    scheduled_commands: [],
-    running_commands: [],
-    finished_commands: [],
+    scheduledCommands: [bigint, DeviceCommand][];
+    runningCommands: [bigint, DeviceCommand][];
+    finishedCommands: DeviceCommand[];
+    isLoading: boolean;
+    fetchCommands: () => Promise<void>;
 };
 
 const CommandsContext = createContext<CommandsContextType>({
-    commands: defaultCommands,
-    refreshCommands: async () => { },
+    scheduledCommands: [],
+    runningCommands: [],
+    finishedCommands: [],
+    isLoading: false,
+    fetchCommands: async () => { },
 });
 
 type Props = {
@@ -23,27 +25,49 @@ type Props = {
 };
 
 export const CommandsProvider: React.FC<Props> = ({ children }) => {
-    const [commands, setCommands] = useState<DeviceCommands>(defaultCommands);
+    const [scheduledCommands, setScheduledCommands] = useState<[bigint, DeviceCommand][]>([]);
+    const [runningCommands, setRunningCommands] = useState<[bigint, DeviceCommand][]>([]);
+    const [finishedCommands, setFinishedCommands] = useState<DeviceCommand[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const refreshCommands = useCallback(async () => {
+    const fetchCommands = useCallback(async () => {
         const commandsResult = await omnia_lighting_app_backend.get_commands();
 
-        setCommands(commandsResult);
+        setScheduledCommands(commandsResult.scheduled_commands.reverse());
+        const _runningCommands = commandsResult.running_commands;
+        const _finishedCommands = commandsResult.finished_commands;
+
+        // move to running commands the commands that were executed in the last 10 seconds
+        for (const cmd of _finishedCommands) {
+            if (differenceInMilliseconds(new Date(), getDate(cmd.schedule_timestamp)) < 15_000) {
+                _runningCommands.push([cmd.schedule_timestamp, cmd]);
+                _finishedCommands.splice(_finishedCommands.indexOf(cmd), 1);
+            }
+        }
+
+        setRunningCommands(_runningCommands.reverse());
+        setFinishedCommands(_finishedCommands.reverse());
     }, []);
 
     useEffect(() => {
+        setIsLoading(true);
+        fetchCommands().then(() => setIsLoading(false));
+
         const interval = setInterval(async () => {
-            await refreshCommands();
+            await fetchCommands();
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [refreshCommands]);
+    }, []);
 
     return (
         <CommandsContext.Provider
             value={{
-                commands,
-                refreshCommands,
+                scheduledCommands,
+                runningCommands,
+                finishedCommands,
+                isLoading,
+                fetchCommands,
             }}
         >
             {children}

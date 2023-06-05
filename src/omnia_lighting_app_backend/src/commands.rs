@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 use crate::{outcalls::transform_device_response, wot::DeviceUrl, STATE};
 
-#[derive(Clone, CandidType, Serialize, Deserialize)]
+#[derive(Clone, Debug, CandidType, Serialize, Deserialize)]
 pub struct CommandHttpArguments {
     /// The URL to send the HTTP request to.
     pub url: String,
@@ -24,7 +24,7 @@ pub struct CommandHttpArguments {
     pub body: Option<Vec<u8>>,
 }
 
-#[derive(Clone, CandidType, Serialize, Deserialize)]
+#[derive(Clone, Debug, CandidType, Serialize, Deserialize)]
 /// Numeric values correspond to the color Hue value sent to the light.
 pub enum LightColor {
     Red = 254,
@@ -32,7 +32,7 @@ pub enum LightColor {
     Blue = 180,
 }
 
-#[derive(Clone, CandidType, Serialize, Deserialize)]
+#[derive(Clone, Debug, CandidType, Serialize, Deserialize)]
 pub struct CommandMetadata {
     /// The color that has been set for the light in RGB hex format.
     ///
@@ -40,7 +40,7 @@ pub struct CommandMetadata {
     pub light_color: LightColor,
 }
 
-#[derive(Clone, CandidType, Serialize, Deserialize)]
+#[derive(Clone, Debug, CandidType, Serialize, Deserialize)]
 pub enum CommandStatus {
     Scheduled,
     Running,
@@ -48,7 +48,7 @@ pub enum CommandStatus {
     Failed(String),
 }
 
-#[derive(Clone, CandidType, Serialize, Deserialize)]
+#[derive(Clone, Debug, CandidType, Serialize, Deserialize)]
 pub struct DeviceCommand {
     pub device_url: DeviceUrl,
     http_arguments: CommandHttpArguments,
@@ -103,6 +103,8 @@ impl DeviceCommands {
 }
 
 async fn execute_command(command: &DeviceCommand) {
+    print(format!("Executing command: {command:?}"));
+
     let mut command = command.to_owned();
     command.status = CommandStatus::Running;
 
@@ -144,12 +146,15 @@ async fn execute_command(command: &DeviceCommand) {
             command.status = CommandStatus::Failed(format!("RejectionCode: {r:?}, Error: {m}"));
         }
     };
+
+    print(format!(
+        "Command executed: {:?}",
+        command.schedule_timestamp
+    ));
 }
 
 pub fn commands_interval_callback() {
     ic_cdk::spawn(async move {
-        print("Commands interval callback triggered");
-
         let commands_to_run = STATE.with(|s| {
             let state = s.borrow_mut();
             state.device_commands.get_commands_to_run()
@@ -181,7 +186,5 @@ pub fn commands_interval_callback() {
                 state.device_commands.finished_commands.push(command);
             });
         }
-
-        print("Commands interval callback finished");
     });
 }

@@ -4,18 +4,18 @@ import {
     ModalBody,
     ModalCloseButton,
     ModalContent,
-    ModalFooter,
     ModalHeader,
     ModalOverlay,
     Radio,
     RadioGroup,
     Stack,
+    Text,
     VStack,
 } from "@chakra-ui/react";
 import { useCallback, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { RiLock2Fill } from "react-icons/ri";
-import { omnia_lighting_app_backend } from "../../../declarations/omnia_lighting_app_backend";
+import { AvailableLightColors, getLightColorEnum } from "../utils/lightColor";
 
 type Props = {
     isOpen: boolean;
@@ -23,37 +23,32 @@ type Props = {
     onClose: () => void;
 };
 
-enum LightColorEnum {
-    Red = "Red",
-    Green = "Green",
-    Blue = "Blue",
-}
-
 const ChooseColorModal: React.FC<Props> = ({ isOpen, deviceUrl, onClose }) => {
     const [isLoading, setIsLoading] = useState(false);
-    const { isAuthenticated, login } = useAuth();
+    const { isAuthenticated, actor, login } = useAuth();
+    const [selectedColor, setSelectedColor] = useState<AvailableLightColors | null>('red');
 
     const handleLoginClick = useCallback(async () => {
         await login();
     }, [login]);
 
-    const handleSubmit: React.FormEventHandler<HTMLDivElement> = useCallback(async (e) => {
-        e.preventDefault();
-
-        console.log(e.currentTarget);
-
+    const handleSubmit = useCallback(async () => {
         setIsLoading(true);
 
+        console.log("Submitting command", getLightColorEnum(selectedColor!));
+
         try {
-            const result = await omnia_lighting_app_backend.schedule_command({
+            const result = await actor!.schedule_command({
                 device_url: deviceUrl,
-                light_color: { Red: null },
+                light_color: getLightColorEnum(selectedColor!),
             });
             setIsLoading(false);
 
             if ("Err" in result) {
                 throw result.Err;
             }
+
+            onClose();
         } catch (e) {
             setIsLoading(false);
             alert(e);
@@ -64,41 +59,53 @@ const ChooseColorModal: React.FC<Props> = ({ isOpen, deviceUrl, onClose }) => {
         <Modal isOpen={isOpen} onClose={onClose}>
             <ModalOverlay />
             <ModalContent>
-                <ModalHeader>Modal Title</ModalHeader>
+                <ModalHeader>Choose a color</ModalHeader>
                 <ModalCloseButton />
-                <ModalBody>
+                <ModalBody
+                    textAlign="center"
+                >
                     {isAuthenticated
                         ? (
                             <VStack
-                                as='form'
-                                onSubmit={handleSubmit}
+                                mb="4"
+                                spacing={4}
                             >
-                                <RadioGroup defaultValue='1'>
-                                    <Stack spacing={4} direction='row'>
+                                <RadioGroup
+                                    value={selectedColor!}
+                                    onChange={(value) => setSelectedColor(value as AvailableLightColors)}
+                                >
+                                    <Stack
+                                        spacing={4}
+                                        direction='row'
+                                        fontWeight="bold"
+                                    >
                                         <Radio
-                                            value={LightColorEnum.Red}
+                                            value='red'
                                             colorScheme='red'
+                                            color='red'
                                         >
-                                            Red
+                                            <Text color='red'>RED</Text>
                                         </Radio>
                                         <Radio
-                                            value={LightColorEnum.Green}
+                                            value='green'
                                             colorScheme='green'
                                         >
-                                            Green
+                                            <Text color='green'>GREEN</Text>
                                         </Radio>
                                         <Radio
-                                            value={LightColorEnum.Blue}
+                                            value='blue'
                                             colorScheme='blue'
+                                            color='blue'
                                         >
-                                            Blue
+                                            <Text color='blue'>BLUE</Text>
                                         </Radio>
                                     </Stack>
                                 </RadioGroup>
                                 <Button
                                     mt={4}
                                     isLoading={isLoading}
-                                    type='submit'
+                                    onClick={handleSubmit}
+                                    colorScheme="blue"
                                 >
                                     Send command
                                 </Button>
@@ -114,15 +121,6 @@ const ChooseColorModal: React.FC<Props> = ({ isOpen, deviceUrl, onClose }) => {
                         )
                     }
                 </ModalBody>
-
-                <ModalFooter
-                    justifyContent='center'
-                    alignItems='center'
-                >
-                    <Button colorScheme='blue' mr={3} onClick={onClose}>
-                        Close
-                    </Button>
-                </ModalFooter>
             </ModalContent>
         </Modal>
     )

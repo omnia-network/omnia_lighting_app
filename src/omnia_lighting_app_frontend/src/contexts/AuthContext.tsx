@@ -1,18 +1,23 @@
-import { Principal } from "@dfinity/principal";
-import { getAuthClient } from "../services/authClient";
+import { ActorSubclass, Identity } from "@dfinity/agent";
+import { AuthClient } from "@dfinity/auth-client";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { getAuthClient } from "../services/authClient";
+import { canisterId, createActor } from "../../../declarations/omnia_lighting_app_backend";
+import { _SERVICE } from "../../../declarations/omnia_lighting_app_backend/omnia_lighting_app_backend.did";
 
 export type AuthContextType = {
     isLoading: boolean;
-    principal: Principal | null;
+    identity: Identity | null;
     isAuthenticated: boolean;
+    actor: ActorSubclass<_SERVICE> | null;
     login: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
     isLoading: false,
-    principal: null,
+    identity: null,
     isAuthenticated: false,
+    actor: null,
     login: async () => { },
 });
 
@@ -22,7 +27,20 @@ type Props = {
 
 export const AuthProvider: React.FC<Props> = ({ children }) => {
     const [isLoading, setIsLoading] = useState(false);
-    const [principal, setPrincipal] = useState<Principal | null>(null);
+    const [identity, setIdentity] = useState<Identity | null>(null);
+    const [actor, setActor] = useState<ActorSubclass<_SERVICE> | null>(null);
+
+    const loginSuccess = useCallback((authClient: AuthClient) => {
+        const identity = authClient.getIdentity();
+        setIdentity(identity);
+
+        const authenticatedActor = createActor(canisterId, {
+            agentOptions: {
+                identity: identity,
+            },
+        });
+        setActor(authenticatedActor);
+    }, []);
 
     const login = useCallback(async () => {
         setIsLoading(true);
@@ -31,10 +49,8 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
         authClient.login({
             async onSuccess() {
                 console.log("Login success");
-
-                const principal = authClient.getIdentity().getPrincipal();
-                setPrincipal(principal);
                 setIsLoading(false);
+                loginSuccess(authClient);
             },
             onError(error) {
                 console.log(error);
@@ -51,8 +67,7 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
             const isAuthenticated = await authClient.isAuthenticated();
             if (isAuthenticated) {
                 console.log("User is logged in");
-                const principal = authClient.getIdentity().getPrincipal();
-                setPrincipal(principal);
+                loginSuccess(authClient);
             }
             setIsLoading(false);
         }).catch((e) => {
@@ -65,8 +80,9 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
         <AuthContext.Provider
             value={{
                 isLoading,
-                principal,
-                isAuthenticated: principal !== null,
+                identity,
+                isAuthenticated: identity !== null,
+                actor,
                 login,
             }}
         >

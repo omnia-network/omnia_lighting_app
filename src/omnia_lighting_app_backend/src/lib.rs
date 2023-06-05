@@ -110,7 +110,7 @@ async fn get_devices_in_environment(environment_uid: String) -> Result<WotDevice
     Ok(STATE.with(|state| {
         let mut wot_devices = WotDevices::new();
         wot_devices.insert(
-            String::from("https://swapi.dev/api/?format=json"),
+            String::from("https://lighting-app.free.beeceptor.com/todos"),
             DeviceHeaders {
                 headers: BTreeMap::from([(
                     String::from("Accept"),
@@ -184,7 +184,7 @@ async fn schedule_command(input: ScheduleCommandInput) -> Result<(), GenericErro
             headers,
             body: Some(body.into()),
         },
-        10_000,
+        15_000,
         user,
         Some(CommandMetadata {
             light_color: input.light_color,
