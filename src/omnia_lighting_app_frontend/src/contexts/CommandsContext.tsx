@@ -46,7 +46,7 @@ export const CommandsProvider: React.FC<Props> = ({ children }) => {
         }
 
         setRunningCommands(_runningCommands.reverse());
-        setFinishedCommands(_finishedCommands.reverse());
+        setFinishedCommands(_finishedCommands);
     }, []);
 
     useEffect(() => {

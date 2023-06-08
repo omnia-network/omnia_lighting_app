@@ -57,7 +57,7 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
 
                 setIsLoading(false);
             },
-            identityProvider: `http://localhost:4943?canisterId=${process.env.INTERNET_IDENTITY_CANISTER_ID}`
+            identityProvider: process.env.DFX_NETWORK === 'ic' ? undefined : `http://localhost:4943?canisterId=${process.env.INTERNET_IDENTITY_CANISTER_ID}`
         });
     }, []);
 

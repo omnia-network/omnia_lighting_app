@@ -15,10 +15,10 @@ use random::init_rng;
 use rdf::update_omnia_backend_canister_id;
 use rdf::{send_query, GenericError};
 use serde::Serialize;
-use std::{cell::RefCell, collections::BTreeMap, ops::Deref, time::Duration};
+use std::{cell::RefCell, ops::Deref, time::Duration};
 use utils::get_hue_from_color;
 use uuid::Uuid;
-use wot::{DeviceHeaders, DeviceUrl, WotDevices};
+use wot::{DeviceUrl, WotDevices};
 
 mod commands;
 mod outcalls;
@@ -105,32 +105,13 @@ async fn get_devices_in_environment(environment_uid: String) -> Result<WotDevice
     );
     print(format!("Query: {}", query));
 
-    // let res = send_query(query).await?;
-    // print(format!("Query result: {:?}", res));
+    let res = send_query(query).await?;
+    print(format!("Query result: {:?}", res));
 
     // save the devices in the shared state, so that we can use them in the other methods
     Ok(STATE.with(|state| {
-        let mut wot_devices = WotDevices::new();
-        wot_devices.insert(
-            String::from("https://lighting-app.free.beeceptor.com/todos"),
-            DeviceHeaders {
-                headers: BTreeMap::from([(
-                    String::from("Accept"),
-                    String::from("application/json"),
-                )]),
-            },
-        );
-        wot_devices.insert(
-            String::from("https://lighting-app.free.beeceptor.com/todos?bla=ble"),
-            DeviceHeaders {
-                headers: BTreeMap::from([(
-                    String::from("Accept"),
-                    String::from("application/json"),
-                )]),
-            },
-        );
-        state.borrow_mut().wot_devices = wot_devices.clone();
-        wot_devices
+        state.borrow_mut().wot_devices = res;
+        state.borrow().wot_devices.clone()
     }))
 }
 
@@ -164,8 +145,7 @@ async fn schedule_command(input: ScheduleCommandInput) -> Result<(), GenericErro
 
     // here we should parse the device Thing Description to get the correct endpoint
     // for now, we assume we already know it since we fetched the device with that capability
-    // let url = format!("{}/actions/768", input.device_url);
-    let url = input.device_url.clone();
+    let url = format!("{}/actions/768", input.device_url);
 
     // same for the body, we should parse the TD to get the correct body structure and format the request accordingly
     let body = format!(
