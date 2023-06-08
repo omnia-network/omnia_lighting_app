@@ -30,5 +30,5 @@ type ScheduleCommandInput = record {
 service : (opt text, text) -> {
     get_devices_in_environment: (text) -> (variant { Ok : WotDevices; Err : text });
     schedule_command: (ScheduleCommandInput) -> (variant { Ok : null; Err : text });
-    get_commands: () -> (DeviceCommands);
+    get_commands: () -> (DeviceCommands) query;
 }
