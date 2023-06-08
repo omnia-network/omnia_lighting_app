@@ -1,39 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Card, CardBody, CardHeader, Center, FormControl, FormLabel, Stack, Heading, Input, SimpleGrid, Spinner, VStack } from '@chakra-ui/react';
+import { Button, Card, CardBody, CardHeader, FormControl, FormLabel, Stack, Heading, Input, SimpleGrid, Spinner, VStack, Box } from '@chakra-ui/react';
 import { RiLightbulbLine } from "react-icons/ri"
-import { omnia_lighting_app_backend } from "../../declarations/omnia_lighting_app_backend";
-import { WotDevices } from '../../declarations/omnia_lighting_app_backend/omnia_lighting_app_backend.did';
 import CommandsQueue from './components/CommandsQueue';
 import ChooseColorModal from './components/ChooseColorModal';
 import LiveStream from './components/LiveStream';
+import { useDevices } from './contexts/DevicesContext';
 
 const App = () => {
   const searchParams = useMemo(() => {
     return new URLSearchParams(window.location.search);
   }, [window.location.search]);
   const [envUid, setEnvUid] = useState<string | null>(searchParams.get("env"));
-  const [isLoading, setIsLoading] = useState(false);
-  const [fetchedDevices, setFetchedDevices] = useState<WotDevices | null>(null);
   const [selectedDeviceUrl, setSelectedDeviceUrl] = useState<string | null>(null);
-
-  const fetchDevices = useCallback(async (environmentUid: string) => {
-    try {
-      setIsLoading(true);
-      const devicesResult = await omnia_lighting_app_backend.get_devices_in_environment(environmentUid);
-
-      setIsLoading(false);
-
-      if ("Ok" in devicesResult) {
-        // we reverse the array just to have lights in the right order (from first paired to last paired)
-        setFetchedDevices(devicesResult.Ok.reverse());
-      } else {
-        throw devicesResult.Err;
-      }
-    } catch (e) {
-      setIsLoading(false);
-      alert(e);
-    }
-  }, []);
+  const { devices, isLoading, fetchDevices, resetDevices } = useDevices();
 
   const handleSubmit: React.FormEventHandler<HTMLDivElement> = useCallback(async (e) => {
     e.preventDefault();
@@ -51,10 +30,6 @@ const App = () => {
     setSelectedDeviceUrl(null);
   }, []);
 
-  const handleBackClick = useCallback(() => {
-    setFetchedDevices(null);
-  }, []);
-
   useEffect(() => {
     if (envUid) {
       fetchDevices(envUid);
@@ -62,7 +37,7 @@ const App = () => {
   }, [envUid, fetchDevices]);
 
   return (
-    <Center
+    <Box
       marginBlock="8"
       marginInline="2"
     >
@@ -73,7 +48,7 @@ const App = () => {
       />
       <VStack spacing="6">
         <Heading>Omnia Lighting App</Heading>
-        {!fetchedDevices
+        {!devices
           ? (
             <VStack
               as="form"
@@ -109,7 +84,7 @@ const App = () => {
                 direction={["column", "row"]}
               >
                 <SimpleGrid minChildWidth="10" spacing="4">
-                  {fetchedDevices.map(([deviceUrl, _], index) => (
+                  {devices.map(([deviceUrl, _], index) => (
                     <Card
                       key={deviceUrl}
                       align="center"
@@ -136,14 +111,14 @@ const App = () => {
               <CommandsQueue />
               <Button
                 variant="outline"
-                onClick={handleBackClick}
+                onClick={resetDevices}
               >
                 Back
               </Button>
             </VStack>
           )}
       </VStack>
-    </Center>
+    </Box>
   )
 }
 

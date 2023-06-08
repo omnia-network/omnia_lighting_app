@@ -1,7 +1,7 @@
 use candid::{CandidType, Deserialize, Principal};
 use commands::{
     commands_interval_callback, CommandHttpArguments, CommandMetadata, DeviceCommand,
-    DeviceCommands, LightColor,
+    DeviceCommands,
 };
 use ic_cdk::{
     api::{
@@ -16,6 +16,7 @@ use rdf::update_omnia_backend_canister_id;
 use rdf::{send_query, GenericError};
 use serde::Serialize;
 use std::{cell::RefCell, collections::BTreeMap, ops::Deref, time::Duration};
+use utils::get_hue_from_color;
 use uuid::Uuid;
 use wot::{DeviceHeaders, DeviceUrl, WotDevices};
 
@@ -23,6 +24,7 @@ mod commands;
 mod outcalls;
 mod random;
 mod rdf;
+mod utils;
 mod wot;
 
 #[derive(Default, CandidType, Serialize, Deserialize)]
@@ -118,6 +120,15 @@ async fn get_devices_in_environment(environment_uid: String) -> Result<WotDevice
                 )]),
             },
         );
+        wot_devices.insert(
+            String::from("https://lighting-app.free.beeceptor.com/todos?bla=ble"),
+            DeviceHeaders {
+                headers: BTreeMap::from([(
+                    String::from("Accept"),
+                    String::from("application/json"),
+                )]),
+            },
+        );
         state.borrow_mut().wot_devices = wot_devices.clone();
         wot_devices
     }))
@@ -126,7 +137,7 @@ async fn get_devices_in_environment(environment_uid: String) -> Result<WotDevice
 #[derive(CandidType, Serialize, Deserialize)]
 struct ScheduleCommandInput {
     device_url: DeviceUrl,
-    light_color: LightColor,
+    light_color: String,
 }
 
 /// Schedule a command to be sent to a device.
@@ -170,7 +181,7 @@ async fn schedule_command(input: ScheduleCommandInput) -> Result<(), GenericErro
             }}
         }}
     }}"#,
-        input.light_color.clone() as u8
+        get_hue_from_color(&input.light_color)
     );
 
     // same for the method
@@ -184,7 +195,7 @@ async fn schedule_command(input: ScheduleCommandInput) -> Result<(), GenericErro
             headers,
             body: Some(body.into()),
         },
-        15_000,
+        0, // initializing the timestamp to 0 because it's set in the schedule_command function
         user,
         Some(CommandMetadata {
             light_color: input.light_color,
@@ -203,5 +214,18 @@ async fn schedule_command(input: ScheduleCommandInput) -> Result<(), GenericErro
 
 #[query]
 fn get_commands() -> DeviceCommands {
-    STATE.with(|state| state.borrow().device_commands.clone())
+    STATE.with(|state| {
+        let state = &state.borrow().device_commands;
+
+        DeviceCommands {
+            finished_commands: state
+                .finished_commands
+                .iter()
+                .rev()
+                .take(10)
+                .cloned()
+                .collect(),
+            ..state.clone()
+        }
+    })
 }

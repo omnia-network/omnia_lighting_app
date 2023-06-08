@@ -15,7 +15,7 @@ import {
 import { useCallback, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { RiLock2Fill } from "react-icons/ri";
-import { AvailableLightColors, getLightColorEnum } from "../utils/lightColor";
+import { AvailableLightColors } from "../utils/lightColor";
 
 type Props = {
     isOpen: boolean;
@@ -33,14 +33,20 @@ const ChooseColorModal: React.FC<Props> = ({ isOpen, deviceUrl, onClose }) => {
     }, [login]);
 
     const handleSubmit = useCallback(async () => {
+
+        if (!selectedColor) {
+            console.log("No color selected");
+            return;
+        }
+
         setIsLoading(true);
 
-        console.log("Submitting command", getLightColorEnum(selectedColor!));
+        console.log("Submitting command", selectedColor);
 
         try {
             const result = await actor!.schedule_command({
                 device_url: deviceUrl,
-                light_color: getLightColorEnum(selectedColor!),
+                light_color: selectedColor,
             });
             setIsLoading(false);
 

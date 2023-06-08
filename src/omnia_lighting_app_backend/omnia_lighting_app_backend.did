@@ -1,18 +1,12 @@
 type DeviceHeaders = record { headers : vec record { text; text } };
 type WotDevices = vec record { text; DeviceHeaders };
 
-type LightColorEnum = variant {
-    Red : null;
-    Green : null;
-    Blue : null;
-};
-
 type DeviceCommand = record {
     device_url : text;
     schedule_timestamp : nat64;
     sender : principal;
     metadata : opt record {
-        light_color : LightColorEnum;
+        light_color : text;
     };
     status : variant {
         Scheduled : null;
@@ -30,7 +24,7 @@ type DeviceCommands = record {
 
 type ScheduleCommandInput = record {
     device_url : text;
-    light_color : LightColorEnum;
+    light_color : text;
 };
 
 service : (opt text, text) -> {

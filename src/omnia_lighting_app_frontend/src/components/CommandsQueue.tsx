@@ -6,6 +6,7 @@ import { differenceInSeconds, formatISO } from "date-fns";
 import Color from "./Color";
 import { useCommands } from "../contexts/CommandsContext";
 import { getDate } from "../utils/timestamp";
+import { AvailableLightColors } from "../utils/lightColor";
 
 type CommandsRowProps = {
     command: DeviceCommand;
@@ -31,9 +32,9 @@ const CommandsRow: React.FC<CommandsRowProps> = ({ command, status }) => {
             </Td>
             <Td>{command.device_url}</Td>
             <Td>
-                <Color color={command.metadata[0]?.light_color} />
+                <Color color={command.metadata[0]?.light_color as AvailableLightColors} />
             </Td>
-            {status !== 'running' && <Td>
+            <Td>
                 {status === 'scheduled'
                     ? (
                         differenceInSeconds(scheduleDate, new Date()) > 0
@@ -42,13 +43,13 @@ const CommandsRow: React.FC<CommandsRowProps> = ({ command, status }) => {
                     )
                     : formatISO(scheduleDate)
                 }
-            </Td>}
+            </Td>
         </Tr>
     );
 };
 
 const CommandsQueue = () => {
-    const { scheduledCommands, runningCommands, finishedCommands, isLoading } = useCommands();
+    const { scheduledCommands, finishedCommands, isLoading } = useCommands();
 
     if (isLoading) {
         return (
@@ -63,32 +64,6 @@ const CommandsQueue = () => {
             spacing='6'
             alignItems='flex-start'
         >
-            {runningCommands.length > 0
-                && (
-                    <>
-                        <Heading as='h5'>Current command</Heading>
-                        <TableContainer>
-                            <Table variant='simple'>
-                                <Thead>
-                                    <Tr>
-                                        <Th>Principal</Th>
-                                        <Th>Device</Th>
-                                        <Th>Color</Th>
-                                    </Tr>
-                                </Thead>
-                                <Tbody>
-                                    {runningCommands.map(([scheduledTimestamp, command], _) => (
-                                        <CommandsRow
-                                            key={`running-${scheduledTimestamp.toString()}`}
-                                            command={command}
-                                            status='running'
-                                        />
-                                    ))}
-                                </Tbody>
-                            </Table>
-                        </TableContainer>
-                    </>
-                )}
             <Heading as='h5'>Scheduled commands</Heading>
             {scheduledCommands.length > 0
                 ? (

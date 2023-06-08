@@ -33,11 +33,11 @@ export const CommandsProvider: React.FC<Props> = ({ children }) => {
     const fetchCommands = useCallback(async () => {
         const commandsResult = await omnia_lighting_app_backend.get_commands();
 
-        setScheduledCommands(commandsResult.scheduled_commands.reverse());
+        setScheduledCommands(commandsResult.scheduled_commands);
+
         const _runningCommands = commandsResult.running_commands;
         const _finishedCommands = commandsResult.finished_commands;
-
-        // move to running commands the commands that were executed in the last 10 seconds
+        // move to running commands the commands that were executed in the last 15 seconds
         for (const cmd of _finishedCommands) {
             if (differenceInMilliseconds(new Date(), getDate(cmd.schedule_timestamp)) < 15_000) {
                 _runningCommands.push([cmd.schedule_timestamp, cmd]);

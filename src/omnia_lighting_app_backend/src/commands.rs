@@ -12,6 +12,9 @@ use uuid::Uuid;
 
 use crate::{outcalls::transform_device_response, wot::DeviceUrl, STATE};
 
+/// The interval between one command and the other (in nanoseconds)
+pub const COMMANDS_INTERVAL: u64 = 15_000_000_000;
+
 #[derive(Clone, Debug, CandidType, Serialize, Deserialize)]
 pub struct CommandHttpArguments {
     /// The URL to send the HTTP request to.
@@ -25,19 +28,11 @@ pub struct CommandHttpArguments {
 }
 
 #[derive(Clone, Debug, CandidType, Serialize, Deserialize)]
-/// Numeric values correspond to the color Hue value sent to the light.
-pub enum LightColor {
-    Red = 254,
-    Green = 60,
-    Blue = 180,
-}
-
-#[derive(Clone, Debug, CandidType, Serialize, Deserialize)]
 pub struct CommandMetadata {
     /// The color that has been set for the light in RGB hex format.
     ///
     /// Example: `#ff0000` for red.
-    pub light_color: LightColor,
+    pub light_color: String,
 }
 
 #[derive(Clone, Debug, CandidType, Serialize, Deserialize)]
@@ -62,14 +57,14 @@ impl DeviceCommand {
     pub fn new(
         device_url: DeviceUrl,
         http_arguments: CommandHttpArguments,
-        execute_in_milliseconds: u64,
+        schedule_timestamp: u64,
         sender: Principal,
         metadata: Option<CommandMetadata>,
     ) -> Self {
         Self {
             device_url,
             http_arguments,
-            schedule_timestamp: time() + (execute_in_milliseconds * 1_000_000),
+            schedule_timestamp,
             sender,
             metadata,
             status: CommandStatus::Scheduled,
@@ -85,10 +80,21 @@ pub struct DeviceCommands {
 }
 
 impl DeviceCommands {
-    pub fn schedule_command(&mut self, c: DeviceCommand) {
-        let schedule_timestamp = c.schedule_timestamp;
+    /// Schedules the next command for the closest timestamp between
+    /// now + 15 seconds and last command schedule timestamp + 15 seconds
+    pub fn schedule_command(&mut self, mut c: DeviceCommand) {
+        let now = time();
+        let last_command_ts = self.get_last_command_timestamp();
+        if now > last_command_ts {
+            c.schedule_timestamp = now + COMMANDS_INTERVAL;
+        } else {
+            c.schedule_timestamp = last_command_ts + COMMANDS_INTERVAL;
+        }
+
+        print(format!("Command scheduled for {}", c.schedule_timestamp));
+
         self.scheduled_commands
-            .entry(schedule_timestamp)
+            .entry(c.schedule_timestamp)
             .or_insert(c);
     }
 
@@ -99,6 +105,14 @@ impl DeviceCommands {
             .range(..current_timestamp)
             .map(|(_, v)| v.clone())
             .collect()
+    }
+
+    fn get_last_command_timestamp(&self) -> u64 {
+        match self.scheduled_commands.last_key_value() {
+            Some((k, _)) => *k,
+            // if there's no command, now is reasonably the closest time
+            None => time(),
+        }
     }
 }
 

@@ -20,9 +20,6 @@ export default defineConfig({
     EnvironmentPlugin('all', {
       prefix: 'INTERNET_IDENTITY',
     }),
-    EnvironmentPlugin('all', {
-      prefix: 'VITE',
-    }),
   ],
   server: {
     proxy: {

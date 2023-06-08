@@ -1,30 +1,20 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
-import { parseLightColor } from "../utils/lightColor";
-import { LightColorEnum } from "../../../declarations/omnia_lighting_app_backend/omnia_lighting_app_backend.did";
-import { useMemo } from "react";
+import { AvailableLightColors, printLightColor } from "../utils/lightColor";
 
 type Props = {
-    color: LightColorEnum | undefined;
+    color: AvailableLightColors;
 };
 
 const Color: React.FC<Props> = ({ color }) => {
-    const bgColor = useMemo(() => {
-        if (color === undefined) {
-            return "gray.200";
-        }
-
-        return parseLightColor(color);
-    }, [color]);
-
     return (
         <HStack>
             <Box
                 w="20px"
                 h="20px"
                 borderRadius="50%"
-                bg={bgColor}
+                bg={color}
             />
-            <Text>{bgColor.toUpperCase()}</Text>
+            <Text>{printLightColor(color)}</Text>
         </HStack>
     );
 };
