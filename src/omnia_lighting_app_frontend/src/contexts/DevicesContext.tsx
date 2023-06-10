@@ -6,7 +6,8 @@ export type DevicesContextType = {
     devices: WotDevices | null;
     isLoading: boolean;
     fetchDevices: (environmentUid: string) => Promise<void>;
-    resetDevices: () => void;
+    resetDevices: () => void
+    getDeviceName: (deviceUrl: string) => string;
 };
 
 const DevicesContext = createContext<DevicesContextType>({
@@ -14,6 +15,7 @@ const DevicesContext = createContext<DevicesContextType>({
     isLoading: false,
     fetchDevices: async () => { },
     resetDevices: () => { },
+    getDeviceName: () => "",
 });
 
 type Props = {
@@ -47,6 +49,16 @@ export const DevicesProvider: React.FC<Props> = ({ children }) => {
         setDevices(null);
     }, []);
 
+    const getDeviceName = useCallback((deviceUrl: string) => {
+        const deviceIndex = devices?.findIndex((d) => d[0] === deviceUrl);
+
+        if (deviceIndex !== undefined) {
+            return `Light #${deviceIndex + 1}`;
+        }
+
+        return deviceUrl;
+    }, [devices]);
+
     return (
         <DevicesContext.Provider
             value={{
@@ -54,6 +66,7 @@ export const DevicesProvider: React.FC<Props> = ({ children }) => {
                 isLoading,
                 fetchDevices,
                 resetDevices,
+                getDeviceName,
             }}
         >
             {children}

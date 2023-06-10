@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import Color from "./Color";
 import { AvailableLightColors } from "../utils/lightColor";
+import { useDevices } from "../contexts/DevicesContext";
 
 const LiveStream = () => {
     const { runningCommands } = useCommands();
@@ -17,10 +18,12 @@ const LiveStream = () => {
 
         return currentCommand?.sender.compareTo(identity.getPrincipal()) === 'eq';
     }, [currentCommand?.sender, identity]);
+    const { getDeviceName } = useDevices();
 
     return (
         <VStack
             gap={2}
+            width={["100%", "auto"]}
         >
             <ReactPlayer
                 url={import.meta.env.VITE_LIVE_STREAM_URL}
@@ -35,7 +38,7 @@ const LiveStream = () => {
                     <HStack>
                         <Text>{currentCommand.sender.toText()}</Text>
                         {isCurrentUser && <Tag>You</Tag>}
-                        <Text>{currentCommand.device_url}</Text>
+                        <Text>{getDeviceName(currentCommand.device_url)}</Text>
                         <Text>
                             <Color color={currentCommand.metadata[0]?.light_color as AvailableLightColors} />
                         </Text>

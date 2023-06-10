@@ -12,7 +12,7 @@ const App = () => {
   }, [window.location.search]);
   const [envUid, setEnvUid] = useState<string | null>(searchParams.get("env"));
   const [selectedDeviceUrl, setSelectedDeviceUrl] = useState<string | null>(null);
-  const { devices, isLoading, fetchDevices, resetDevices } = useDevices();
+  const { devices, isLoading, fetchDevices, resetDevices, getDeviceName } = useDevices();
 
   const handleSubmit: React.FormEventHandler<HTMLDivElement> = useCallback(async (e) => {
     e.preventDefault();
@@ -83,14 +83,20 @@ const App = () => {
                 justifyContent={["center", "space-between"]}
                 direction={["column", "row"]}
               >
-                <SimpleGrid minChildWidth="10" spacing="4">
-                  {devices.map(([deviceUrl, _], index) => (
+                <SimpleGrid
+                  minChildWidth="10"
+                  spacing="4"
+                  flexGrow={1}
+                  justifyItems="center"
+                >
+                  {devices.map(([deviceUrl, _]) => (
                     <Card
                       key={deviceUrl}
                       align="center"
+                      width="60"
                     >
                       <CardHeader>
-                        Light #{index + 1}
+                        {getDeviceName(deviceUrl)}
                       </CardHeader>
                       <CardBody>
                         <Button
@@ -104,9 +110,7 @@ const App = () => {
                     </Card>
                   ))}
                 </SimpleGrid>
-                <VStack>
-                  <LiveStream />
-                </VStack>
+                <LiveStream />
               </Stack>
               <CommandsQueue />
               <Button
