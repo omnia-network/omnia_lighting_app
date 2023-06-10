@@ -1,27 +1,9 @@
-import { Text, Heading, VStack, Tag, HStack } from "@chakra-ui/react";
+import { Box } from "@chakra-ui/react";
 import ReactPlayer from "react-player";
-import { useCommands } from "../contexts/CommandsContext";
-import { useMemo } from "react";
-import { useAuth } from "../contexts/AuthContext";
-import Color from "./Color";
-import { AvailableLightColors } from "../utils/lightColor";
-import { useDevices } from "../contexts/DevicesContext";
 
 const LiveStream = () => {
-    const { runningCommands } = useCommands();
-    const { identity } = useAuth();
-    const currentCommand = useMemo(() => runningCommands.length > 0 ? runningCommands[0][1] : undefined, [runningCommands]);
-    const isCurrentUser = useMemo(() => {
-        if (identity === null) {
-            return false;
-        }
-
-        return currentCommand?.sender.compareTo(identity.getPrincipal()) === 'eq';
-    }, [currentCommand?.sender, identity]);
-    const { getDeviceName } = useDevices();
-
     return (
-        <VStack
+        <Box
             gap={2}
             width={["100%", "auto"]}
         >
@@ -32,22 +14,7 @@ const LiveStream = () => {
                 muted
                 playsinline
             />
-            <Heading as='h5' fontSize='xs'>Current command</Heading>
-            {currentCommand
-                ? (
-                    <HStack>
-                        <Text>{currentCommand.sender.toText()}</Text>
-                        {isCurrentUser && <Tag>You</Tag>}
-                        <Text>{getDeviceName(currentCommand.device_url)}</Text>
-                        <Text>
-                            <Color color={currentCommand.metadata[0]?.light_color as AvailableLightColors} />
-                        </Text>
-                    </HStack>
-                )
-                : (
-                    <Text>No command is being executed now</Text>
-                )}
-        </VStack>
+        </Box>
     );
 };
 

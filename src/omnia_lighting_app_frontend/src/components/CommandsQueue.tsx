@@ -14,7 +14,7 @@ type CommandsRowProps = {
     status: "scheduled" | "running" | "finished";
 };
 
-const CommandsRow: React.FC<CommandsRowProps> = ({ command, status }) => {
+export const CommandsRow: React.FC<CommandsRowProps> = ({ command, status }) => {
     const { identity } = useAuth();
     const isCurrentUser = useMemo(() => {
         if (identity === null) {
@@ -32,20 +32,26 @@ const CommandsRow: React.FC<CommandsRowProps> = ({ command, status }) => {
                 <Text>{command.sender.toText()}</Text>
                 {isCurrentUser && <Tag>You</Tag>}
             </Td>
-            <Td>{getDeviceName(command.device_url)}</Td>
+            <Td>
+                <Tag colorScheme="purple">
+                    {getDeviceName(command.device_url)}
+                </Tag>
+            </Td>
             <Td>
                 <Color color={command.metadata[0]?.light_color as AvailableLightColors} />
             </Td>
-            <Td>
-                {status === 'scheduled'
-                    ? (
-                        differenceInSeconds(scheduleDate, new Date()) > 0
-                            ? `${differenceInSeconds(scheduleDate, new Date())} seconds`
-                            : 'Now'
-                    )
-                    : formatISO(scheduleDate)
-                }
-            </Td>
+            {status !== 'running' && (
+                <Td>
+                    {status === 'scheduled'
+                        ? (
+                            differenceInSeconds(scheduleDate, new Date()) > 0
+                                ? `${differenceInSeconds(scheduleDate, new Date())} seconds`
+                                : 'Shortly...'
+                        )
+                        : formatISO(scheduleDate)
+                    }
+                </Td>
+            )}
         </Tr>
     );
 };

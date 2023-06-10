@@ -5,6 +5,7 @@ import CommandsQueue from './components/CommandsQueue';
 import ChooseColorModal from './components/ChooseColorModal';
 import LiveStream from './components/LiveStream';
 import { useDevices } from './contexts/DevicesContext';
+import CurrentCommand from './components/CurrentCommand';
 
 const App = () => {
   const searchParams = useMemo(() => {
@@ -76,40 +77,43 @@ const App = () => {
               </Button>
             </VStack>
           ) : (
-            <VStack w="100%" spacing="8">
+            <VStack w="100%" gap="16">
               <Stack
                 w="100%"
-                alignItems="center"
+                alignItems="flex-start"
                 justifyContent={["center", "space-between"]}
                 direction={["column", "row"]}
               >
-                <SimpleGrid
-                  minChildWidth="10"
-                  spacing="4"
-                  flexGrow={1}
-                  justifyItems="center"
-                >
-                  {devices.map(([deviceUrl, _]) => (
-                    <Card
-                      key={deviceUrl}
-                      align="center"
-                      width="60"
-                    >
-                      <CardHeader>
-                        {getDeviceName(deviceUrl)}
-                      </CardHeader>
-                      <CardBody>
-                        <Button
-                          aria-label="Toggle light"
-                          leftIcon={<RiLightbulbLine />}
-                          onClick={() => handleDeviceClick(deviceUrl)}
-                        >
-                          Set color
-                        </Button>
-                      </CardBody>
-                    </Card>
-                  ))}
-                </SimpleGrid>
+                <VStack gap="8">
+                  <SimpleGrid
+                    minChildWidth="10"
+                    spacing="4"
+                    width="100%"
+                    justifyItems="center"
+                  >
+                    {devices.map(([deviceUrl, _]) => (
+                      <Card
+                        key={deviceUrl}
+                        align="center"
+                        width="60"
+                      >
+                        <CardHeader>
+                          {getDeviceName(deviceUrl)}
+                        </CardHeader>
+                        <CardBody>
+                          <Button
+                            aria-label="Toggle light"
+                            leftIcon={<RiLightbulbLine />}
+                            onClick={() => handleDeviceClick(deviceUrl)}
+                          >
+                            Set color
+                          </Button>
+                        </CardBody>
+                      </Card>
+                    ))}
+                  </SimpleGrid>
+                  <CurrentCommand />
+                </VStack>
                 <LiveStream />
               </Stack>
               <CommandsQueue />
