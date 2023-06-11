@@ -115,6 +115,54 @@ async fn get_devices_in_environment(environment_uid: String) -> Result<WotDevice
     }))
 }
 
+// used just for development purposes
+// use std::collections::BTreeMap;
+// use wot::DeviceHeaders;
+// #[update]
+// async fn get_devices_in_environment(environment_uid: String) -> Result<WotDevices, GenericError> {
+//     let environment_urn = Uuid::parse_str(&environment_uid)
+//         .map_err(|op| op.to_string())?
+//         .urn();
+
+//     // with this query, we get all the devices in the environment that have the toggle capability
+//     let query = format!(
+//         r#"
+//         SELECT ?device ?headerName ?headerValue WHERE {{
+//             {environment_urn} bot:hasElement ?device .
+//             ?device td:hasActionAffordance saref:ToggleCommand .
+//             ?device omnia:requiresHeader ?header .
+//             ?header http:fieldName ?headerName ;
+//                     http:fieldValue ?headerValue .
+//         }}"#
+//     );
+//     print(format!("Query: {}", query));
+
+//     // save the devices in the shared state, so that we can use them in the other methods
+//     Ok(STATE.with(|state| {
+//         let mut wot_devices = WotDevices::new();
+//         wot_devices.insert(
+//             String::from("https://lighting-app.free.beeceptor.com/todos"),
+//             DeviceHeaders {
+//                 headers: BTreeMap::from([(
+//                     String::from("Accept"),
+//                     String::from("application/json"),
+//                 )]),
+//             },
+//         );
+//         wot_devices.insert(
+//             String::from("https://lighting-app.free.beeceptor.com/todos?bla=ble"),
+//             DeviceHeaders {
+//                 headers: BTreeMap::from([(
+//                     String::from("Accept"),
+//                     String::from("application/json"),
+//                 )]),
+//             },
+//         );
+//         state.borrow_mut().wot_devices = wot_devices.clone();
+//         wot_devices
+//     }))
+// }
+
 #[derive(CandidType, Serialize, Deserialize)]
 struct ScheduleCommandInput {
     device_url: DeviceUrl,
