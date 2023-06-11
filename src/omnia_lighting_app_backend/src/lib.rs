@@ -97,7 +97,7 @@ async fn get_devices_in_environment(environment_uid: String) -> Result<WotDevice
         r#"
         SELECT ?device ?headerName ?headerValue WHERE {{
             {environment_urn} bot:hasElement ?device .
-            ?device td:hasActionAffordance saref:ToggleCommand .
+            ?device rdf:type saref:Device .
             ?device omnia:requiresHeader ?header .
             ?header http:fieldName ?headerName ;
                     http:fieldValue ?headerValue .

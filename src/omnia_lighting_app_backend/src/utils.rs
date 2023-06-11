@@ -4,8 +4,8 @@ use ic_cdk::print;
 pub fn get_hue_from_color(color: &str) -> u8 {
     match color {
         "red" => 254,
-        "green" => 60,
-        "blue" => 180,
+        "green" => 85,
+        "blue" => 170,
         _ => {
             print("Color not supported");
             0
