@@ -29,8 +29,13 @@ export const CommandsRow: React.FC<CommandsRowProps> = ({ command, status }) => 
     return (
         <Tr>
             <Td>
-                <Text>{command.sender.toText()}</Text>
                 {isCurrentUser && <Tag>You</Tag>}
+                <Text
+                    wordBreak="break-all"
+                    whiteSpace="break-spaces"
+                >
+                    {command.sender.toText()}
+                </Text>
             </Td>
             <Td>
                 <Tag colorScheme="purple">
@@ -93,7 +98,7 @@ const CommandsQueue = () => {
                             </Tr>
                         </Thead>
                         <Tbody>
-                            {scheduledCommands.map(([scheduledTimestamp, command], _) => (
+                            {scheduledCommands.map(([scheduledTimestamp, command]) => (
                                 <CommandsRow
                                     key={`scheduled-${scheduledTimestamp.toString()}`}
                                     command={command}
@@ -112,7 +117,12 @@ const CommandsQueue = () => {
                     border='none'
                 >
                     <AccordionButton paddingLeft={0}>
-                        <Heading as='h5'>Completed commands</Heading>
+                        <Heading
+                            as='h5'
+                            textAlign='left'
+                        >
+                            Last 10 commands
+                        </Heading>
                         <AccordionIcon
                             gap={2}
                             width={6}
@@ -136,7 +146,7 @@ const CommandsQueue = () => {
                                             </Tr>
                                         </Thead>
                                         <Tbody>
-                                            {finishedCommands.map((command, _) => (
+                                            {finishedCommands.map((command) => (
                                                 <CommandsRow
                                                     key={`finished-${command.schedule_timestamp.toString()}`}
                                                     command={command}

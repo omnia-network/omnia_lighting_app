@@ -10,7 +10,7 @@ import CurrentCommand from './components/CurrentCommand';
 const App = () => {
   const searchParams = useMemo(() => {
     return new URLSearchParams(window.location.search);
-  }, [window.location.search]);
+  }, []);
   const [envUid, setEnvUid] = useState<string | null>(searchParams.get("env"));
   const [selectedDeviceUrl, setSelectedDeviceUrl] = useState<string | null>(null);
   const { devices, isLoading, fetchDevices, resetDevices, getDeviceName } = useDevices();
@@ -53,16 +53,23 @@ const App = () => {
           ? (
             <VStack
               as="form"
-              w="100%"
-              spacing="4"
+              width={{
+                base: "100%",
+                sm: "360px",
+              }}
+              gap={4}
+              textAlign="center"
               onSubmit={handleSubmit}
             >
-              <FormControl>
+              <FormControl
+                textAlign="center"
+              >
                 <FormLabel>Environment unique ID:</FormLabel>
                 <Input
                   value={envUid!}
                   onChange={(e) => setEnvUid(e.target.value)}
                   placeholder="00000000-0000-0000-0000-000000000000"
+
                   required
                 />
               </FormControl>
@@ -77,25 +84,44 @@ const App = () => {
               </Button>
             </VStack>
           ) : (
-            <VStack w="100%" gap="16">
+            <VStack
+              w="100%"
+              gap={{
+                base: 8,
+                md: 16,
+              }}
+            >
               <Stack
                 w="100%"
                 alignItems="flex-start"
-                justifyContent={["center", "space-between"]}
-                direction={["column", "row"]}
+                justifyContent={{
+                  base: "center",
+                  lg: "space-between",
+                }}
+                direction={{
+                  base: "column",
+                  lg: "row",
+                }}
+                gap={{
+                  base: 8,
+                  lg: 0,
+                }}
               >
-                <VStack gap="8">
+                <VStack
+                  gap="8"
+                  flexGrow={1}
+                  width="100%"
+                >
                   <SimpleGrid
                     minChildWidth="10"
                     spacing="4"
                     width="100%"
                     justifyItems="center"
                   >
-                    {devices.map(([deviceUrl, _]) => (
+                    {devices.map(([deviceUrl,]) => (
                       <Card
                         key={deviceUrl}
                         align="center"
-                        width="60"
                       >
                         <CardHeader>
                           {getDeviceName(deviceUrl)}
@@ -121,12 +147,12 @@ const App = () => {
                 variant="outline"
                 onClick={resetDevices}
               >
-                Back
+                Change environment
               </Button>
             </VStack>
           )}
       </VStack>
-    </Box>
+    </Box >
   )
 }
 

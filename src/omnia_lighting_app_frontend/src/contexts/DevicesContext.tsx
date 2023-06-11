@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState } from "react";
+import { Context, createContext, useCallback, useContext, useState } from "react";
 import { WotDevices } from "../../../declarations/omnia_lighting_app_backend/omnia_lighting_app_backend.did";
 import { omnia_lighting_app_backend } from "../../../declarations/omnia_lighting_app_backend";
 
@@ -10,13 +10,7 @@ export type DevicesContextType = {
     getDeviceName: (deviceUrl: string) => string;
 };
 
-const DevicesContext = createContext<DevicesContextType>({
-    devices: null,
-    isLoading: false,
-    fetchDevices: async () => { },
-    resetDevices: () => { },
-    getDeviceName: () => "",
-});
+const DevicesContext = createContext<DevicesContextType | null>(null);
 
 type Props = {
     children?: React.ReactNode;
@@ -75,7 +69,7 @@ export const DevicesProvider: React.FC<Props> = ({ children }) => {
 };
 
 export const useDevices = () => {
-    const context = useContext(DevicesContext);
+    const context = useContext(DevicesContext as Context<DevicesContextType>);
 
     return context;
 };

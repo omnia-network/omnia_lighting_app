@@ -1,6 +1,6 @@
 import { ActorSubclass, Identity } from "@dfinity/agent";
 import { AuthClient } from "@dfinity/auth-client";
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { Context, createContext, useCallback, useContext, useEffect, useState } from "react";
 import { getAuthClient } from "../services/authClient";
 import { canisterId, createActor } from "../../../declarations/omnia_lighting_app_backend";
 import { _SERVICE } from "../../../declarations/omnia_lighting_app_backend/omnia_lighting_app_backend.did";
@@ -13,13 +13,7 @@ export type AuthContextType = {
     login: () => Promise<void>;
 };
 
-const AuthContext = createContext<AuthContextType>({
-    isLoading: false,
-    identity: null,
-    isAuthenticated: false,
-    actor: null,
-    login: async () => { },
-});
+const AuthContext = createContext<AuthContextType | null>(null);
 
 type Props = {
     children?: React.ReactNode;
@@ -59,7 +53,7 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
             },
             identityProvider: process.env.DFX_NETWORK === 'ic' ? undefined : `http://localhost:4943?canisterId=${process.env.INTERNET_IDENTITY_CANISTER_ID}`
         });
-    }, []);
+    }, [loginSuccess]);
 
     useEffect(() => {
         getAuthClient().then(async (authClient) => {
@@ -74,7 +68,7 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
             console.log("Error initializing auth client", e);
             setIsLoading(false);
         });
-    }, []);
+    }, [loginSuccess]);
 
     return (
         <AuthContext.Provider
@@ -92,7 +86,7 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
 };
 
 export const useAuth = () => {
-    const context = useContext(AuthContext);
+    const context = useContext(AuthContext as Context<AuthContextType>);
 
     if (context === undefined) {
         throw new Error("useAuth must be used within a AuthProvider");

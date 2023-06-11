@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { Context, createContext, useCallback, useContext, useEffect, useState } from "react";
 import { DeviceCommand } from "../../../declarations/omnia_lighting_app_backend/omnia_lighting_app_backend.did";
 import { omnia_lighting_app_backend } from "../../../declarations/omnia_lighting_app_backend";
 import { differenceInMilliseconds } from "date-fns";
@@ -12,13 +12,7 @@ export type CommandsContextType = {
     fetchCommands: () => Promise<void>;
 };
 
-const CommandsContext = createContext<CommandsContextType>({
-    scheduledCommands: [],
-    runningCommands: [],
-    finishedCommands: [],
-    isLoading: false,
-    fetchCommands: async () => { },
-});
+const CommandsContext = createContext<CommandsContextType | null>(null);
 
 type Props = {
     children?: React.ReactNode;
@@ -45,6 +39,9 @@ export const CommandsProvider: React.FC<Props> = ({ children }) => {
             }
         }
 
+        // add a command from finished commands to running commands just during development
+        // _runningCommands.push([_finishedCommands[0].schedule_timestamp, _finishedCommands[0]]);
+
         setRunningCommands(_runningCommands.reverse());
         setFinishedCommands(_finishedCommands);
     }, []);
@@ -58,7 +55,7 @@ export const CommandsProvider: React.FC<Props> = ({ children }) => {
         }, 1000);
 
         return () => clearInterval(interval);
-    }, []);
+    }, [fetchCommands]);
 
     return (
         <CommandsContext.Provider
@@ -76,7 +73,7 @@ export const CommandsProvider: React.FC<Props> = ({ children }) => {
 };
 
 export const useCommands = () => {
-    const context = useContext(CommandsContext);
+    const context = useContext(CommandsContext as Context<CommandsContextType>);
 
     if (context === undefined) {
         throw new Error("useCommands must be used within a CommandsProvider");

@@ -9,13 +9,16 @@ import {
     Radio,
     RadioGroup,
     Stack,
+    Tag,
     Text,
     VStack,
+    useBreakpointValue,
 } from "@chakra-ui/react";
-import { useCallback, useState } from "react";
+import { CSSProperties, useCallback, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { RiLock2Fill } from "react-icons/ri";
 import { AvailableLightColors } from "../utils/lightColor";
+import { useDevices } from "../contexts/DevicesContext";
 
 type Props = {
     isOpen: boolean;
@@ -27,13 +30,23 @@ const ChooseColorModal: React.FC<Props> = ({ isOpen, deviceUrl, onClose }) => {
     const [isLoading, setIsLoading] = useState(false);
     const { isAuthenticated, actor, login } = useAuth();
     const [selectedColor, setSelectedColor] = useState<AvailableLightColors | null>('red');
+    const { getDeviceName } = useDevices();
+    const modalContentStyle = useBreakpointValue<CSSProperties | undefined>({
+        base: {
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            borderBottomLeftRadius: 0,
+            borderBottomRightRadius: 0,
+        },
+        md: undefined,
+    });
 
     const handleLoginClick = useCallback(async () => {
         await login();
     }, [login]);
 
     const handleSubmit = useCallback(async () => {
-
         if (!selectedColor) {
             console.log("No color selected");
             return;
@@ -59,22 +72,38 @@ const ChooseColorModal: React.FC<Props> = ({ isOpen, deviceUrl, onClose }) => {
             setIsLoading(false);
             alert(e);
         }
-    }, [deviceUrl]);
+    }, [deviceUrl, selectedColor, actor, onClose]);
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose}>
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            isCentered
+        >
             <ModalOverlay />
-            <ModalContent>
-                <ModalHeader>Choose a color</ModalHeader>
+            <ModalContent
+                style={modalContentStyle}
+            >
+                <ModalHeader>
+                    Choose a color for
+                    <Tag
+                        ml="2"
+                        verticalAlign="middle"
+                        colorScheme="purple"
+                    >
+                        {getDeviceName(deviceUrl)}
+                    </Tag>
+                </ModalHeader>
                 <ModalCloseButton />
                 <ModalBody
                     textAlign="center"
+                    paddingBlock={8}
                 >
                     {isAuthenticated
                         ? (
                             <VStack
                                 mb="4"
-                                spacing={4}
+                                gap={8}
                             >
                                 <RadioGroup
                                     value={selectedColor!}
