@@ -51,7 +51,7 @@ export const CommandsRow: React.FC<CommandsRowProps> = ({ command, status }) => 
                         ? (
                             differenceInSeconds(scheduleDate, new Date()) > 0
                                 ? `${differenceInSeconds(scheduleDate, new Date())} seconds`
-                                : 'Shortly...'
+                                : 'HTTPS outcall...'
                         )
                         : formatISO(scheduleDate)
                     }
@@ -146,9 +146,9 @@ const CommandsQueue = () => {
                                             </Tr>
                                         </Thead>
                                         <Tbody>
-                                            {finishedCommands.map((command) => (
+                                            {finishedCommands.map(([executionTimestamp, command]) => (
                                                 <CommandsRow
-                                                    key={`finished-${command.schedule_timestamp.toString()}`}
+                                                    key={`finished-${executionTimestamp.toString()}`}
                                                     command={command}
                                                     status='finished'
                                                 />

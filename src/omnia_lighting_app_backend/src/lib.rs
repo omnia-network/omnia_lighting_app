@@ -251,7 +251,7 @@ fn get_commands() -> DeviceCommands {
                 .iter()
                 .rev()
                 .take(10)
-                .cloned()
+                .map(|(t, c)| (t.clone(), c.clone()))
                 .collect(),
             ..state.clone()
         }

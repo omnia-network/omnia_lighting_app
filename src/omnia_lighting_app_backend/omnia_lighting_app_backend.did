@@ -19,7 +19,7 @@ type DeviceCommand = record {
 type DeviceCommands = record {
     scheduled_commands : vec record { nat64; DeviceCommand };
     running_commands : vec record { nat64; DeviceCommand };
-    finished_commands : vec DeviceCommand;
+    finished_commands : vec record { nat64; DeviceCommand };
 };
 
 type ScheduleCommandInput = record {

@@ -76,7 +76,7 @@ impl DeviceCommand {
 pub struct DeviceCommands {
     pub scheduled_commands: BTreeMap<u64, DeviceCommand>,
     pub running_commands: BTreeMap<u64, DeviceCommand>,
-    pub finished_commands: Vec<DeviceCommand>,
+    pub finished_commands: BTreeMap<u64, DeviceCommand>,
 }
 
 impl DeviceCommands {
@@ -197,7 +197,10 @@ pub fn commands_interval_callback() {
                     .running_commands
                     .remove(&command.schedule_timestamp);
 
-                state.device_commands.finished_commands.push(command);
+                state
+                    .device_commands
+                    .finished_commands
+                    .insert(command.schedule_timestamp, command)
             });
         }
     });
