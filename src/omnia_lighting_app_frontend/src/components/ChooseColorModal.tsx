@@ -38,6 +38,8 @@ const ChooseColorModal: React.FC<Props> = ({ isOpen, deviceUrl, onClose }) => {
             left: 0,
             borderBottomLeftRadius: 0,
             borderBottomRightRadius: 0,
+            width: "100%",
+            maxWidth: "100%",
         },
         md: undefined,
     });

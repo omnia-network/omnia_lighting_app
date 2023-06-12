@@ -4,11 +4,16 @@ import { omnia_lighting_app_backend } from "../../../declarations/omnia_lighting
 import { differenceInMilliseconds } from "date-fns";
 import { getDate } from "../utils/timestamp";
 
+type LastDevicesCommand = {
+    [deviceUrl: string]: DeviceCommand;
+};
+
 export type CommandsContextType = {
     scheduledCommands: [bigint, DeviceCommand][];
     runningCommands: [bigint, DeviceCommand][];
     finishedCommands: [bigint, DeviceCommand][];
     isLoading: boolean;
+    lastDevicesCommand: LastDevicesCommand;
     fetchCommands: () => Promise<void>;
 };
 
@@ -23,6 +28,7 @@ export const CommandsProvider: React.FC<Props> = ({ children }) => {
     const [runningCommands, setRunningCommands] = useState<[bigint, DeviceCommand][]>([]);
     const [finishedCommands, setFinishedCommands] = useState<[bigint, DeviceCommand][]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [lastDevicesCommand, setLastDevicesCommand] = useState<LastDevicesCommand>({});
 
     const fetchCommands = useCallback(async () => {
         const commandsResult = await omnia_lighting_app_backend.get_commands();
@@ -31,7 +37,7 @@ export const CommandsProvider: React.FC<Props> = ({ children }) => {
 
         const _runningCommands = commandsResult.running_commands;
         const _finishedCommands = commandsResult.finished_commands;
-        // move to running commands the commands that were executed in the last 15 seconds
+        // keep in running commands the commands that were executed in the last 15 seconds
         for (const [ts, cmd] of _finishedCommands) {
             if (differenceInMilliseconds(new Date(), getDate(ts)) < 15_000) {
                 _runningCommands.push([ts, cmd]);
@@ -43,6 +49,13 @@ export const CommandsProvider: React.FC<Props> = ({ children }) => {
         // _runningCommands.push([_finishedCommands[0].schedule_timestamp, _finishedCommands[0]]);
 
         setRunningCommands(_runningCommands.reverse());
+        for (const runningCommand of _runningCommands) {
+            setLastDevicesCommand((prev) => ({
+                ...prev,
+                [runningCommand[1].device_url]: runningCommand[1],
+            }));
+        }
+
         setFinishedCommands(_finishedCommands.reverse());
     }, []);
 
@@ -64,6 +77,7 @@ export const CommandsProvider: React.FC<Props> = ({ children }) => {
                 runningCommands,
                 finishedCommands,
                 isLoading,
+                lastDevicesCommand,
                 fetchCommands,
             }}
         >

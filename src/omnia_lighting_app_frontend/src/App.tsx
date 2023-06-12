@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Card, CardBody, CardHeader, FormControl, FormLabel, Stack, Heading, Input, SimpleGrid, Spinner, VStack, Box } from '@chakra-ui/react';
+import { Button, Card, CardBody, CardHeader, FormControl, FormLabel, Stack, Heading, Input, SimpleGrid, Spinner, Text, VStack, Box, StackDivider } from '@chakra-ui/react';
 import { RiLightbulbLine } from "react-icons/ri"
 import CommandsQueue from './components/CommandsQueue';
 import ChooseColorModal from './components/ChooseColorModal';
 import LiveStream from './components/LiveStream';
 import { useDevices } from './contexts/DevicesContext';
-import CurrentCommand from './components/CurrentCommand';
+import { useCommands } from './contexts/CommandsContext';
+import { getCardColorScheme } from './utils/lightColor';
+import PrincipalDisplay from './components/PrincipalDisplay';
 
 const App = () => {
   const searchParams = useMemo(() => {
@@ -14,6 +16,7 @@ const App = () => {
   const [envUid, setEnvUid] = useState<string | null>(searchParams.get("env"));
   const [selectedDeviceUrl, setSelectedDeviceUrl] = useState<string | null>(null);
   const { devices, isLoading, fetchDevices, resetDevices, getDeviceName } = useDevices();
+  const { lastDevicesCommand } = useCommands();
 
   const handleSubmit: React.FormEventHandler<HTMLDivElement> = useCallback(async (e) => {
     e.preventDefault();
@@ -93,7 +96,7 @@ const App = () => {
             >
               <Stack
                 w="100%"
-                alignItems="flex-start"
+                alignItems="center"
                 justifyContent={{
                   base: "center",
                   lg: "space-between",
@@ -122,23 +125,43 @@ const App = () => {
                       <Card
                         key={deviceUrl}
                         align="center"
+                        backgroundColor={getCardColorScheme(lastDevicesCommand[deviceUrl]?.metadata[0]?.light_color)}
                       >
                         <CardHeader>
                           {getDeviceName(deviceUrl)}
                         </CardHeader>
-                        <CardBody>
-                          <Button
-                            aria-label="Toggle light"
-                            leftIcon={<RiLightbulbLine />}
-                            onClick={() => handleDeviceClick(deviceUrl)}
-                          >
-                            Set color
-                          </Button>
+                        <CardBody
+                          textAlign="center"
+                        >
+                          <Stack divider={<StackDivider />}>
+                            <Box>
+                              <Button
+                                aria-label="Toggle light"
+                                leftIcon={<RiLightbulbLine />}
+                                onClick={() => handleDeviceClick(deviceUrl)}
+                                colorScheme={lastDevicesCommand[deviceUrl]?.metadata[0]?.light_color}
+                                marginBottom={2}
+                              >
+                                Set color
+                              </Button>
+                            </Box>
+                            {lastDevicesCommand[deviceUrl] && (
+                              <Box>
+                                <Text
+                                  fontSize="sm"
+                                  fontWeight="bold"
+                                  marginBottom={1}
+                                >
+                                  Last command by:
+                                </Text>
+                                <PrincipalDisplay principal={lastDevicesCommand[deviceUrl].sender} textLength='short' />
+                              </Box>
+                            )}
+                          </Stack>
                         </CardBody>
                       </Card>
                     ))}
                   </SimpleGrid>
-                  <CurrentCommand />
                 </VStack>
                 <LiveStream />
               </Stack>

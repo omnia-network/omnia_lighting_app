@@ -1,13 +1,13 @@
 import { Accordion, AccordionButton, AccordionIcon, AccordionItem, AccordionPanel, Box, Heading, Spinner, Table, TableContainer, Tag, Tbody, Td, Text, Th, Thead, Tr, VStack } from "@chakra-ui/react";
 import { useMemo } from "react";
 import { DeviceCommand } from "../../../declarations/omnia_lighting_app_backend/omnia_lighting_app_backend.did";
-import { useAuth } from "../contexts/AuthContext";
 import { differenceInSeconds, formatISO } from "date-fns";
 import Color from "./Color";
 import { useCommands } from "../contexts/CommandsContext";
 import { getDate } from "../utils/timestamp";
 import { AvailableLightColors } from "../utils/lightColor";
 import { useDevices } from "../contexts/DevicesContext";
+import PrincipalDisplay from "./PrincipalDisplay";
 
 type CommandsRowProps = {
     command: DeviceCommand;
@@ -15,27 +15,13 @@ type CommandsRowProps = {
 };
 
 export const CommandsRow: React.FC<CommandsRowProps> = ({ command, status }) => {
-    const { identity } = useAuth();
-    const isCurrentUser = useMemo(() => {
-        if (identity === null) {
-            return false;
-        }
-
-        return command.sender.compareTo(identity.getPrincipal()) === 'eq';
-    }, [command.sender, identity]);
     const scheduleDate = useMemo(() => getDate(command.schedule_timestamp), [command.schedule_timestamp]);
     const { getDeviceName } = useDevices();
 
     return (
         <Tr>
             <Td>
-                {isCurrentUser && <Tag>You</Tag>}
-                <Text
-                    wordBreak="break-all"
-                    whiteSpace="break-spaces"
-                >
-                    {command.sender.toText()}
-                </Text>
+                <PrincipalDisplay principal={command.sender} textLength='medium' />
             </Td>
             <Td>
                 <Tag colorScheme="purple">
@@ -45,18 +31,16 @@ export const CommandsRow: React.FC<CommandsRowProps> = ({ command, status }) => 
             <Td>
                 <Color color={command.metadata[0]?.light_color as AvailableLightColors} />
             </Td>
-            {status !== 'running' && (
-                <Td>
-                    {status === 'scheduled'
-                        ? (
-                            differenceInSeconds(scheduleDate, new Date()) > 0
-                                ? `${differenceInSeconds(scheduleDate, new Date())} seconds`
-                                : 'HTTPS outcall...'
-                        )
-                        : formatISO(scheduleDate)
-                    }
-                </Td>
-            )}
+            <Td>
+                {status === 'scheduled'
+                    ? (
+                        differenceInSeconds(scheduleDate, new Date()) > 0
+                            ? `${differenceInSeconds(scheduleDate, new Date())} seconds`
+                            : 'HTTPS outcall...'
+                    )
+                    : formatISO(scheduleDate)
+                }
+            </Td>
         </Tr>
     );
 };
