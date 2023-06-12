@@ -61,13 +61,13 @@ const CommandsQueue = () => {
             spacing='6'
             alignItems='flex-start'
             width='100%'
-            paddingInline={4}
         >
             <Box
                 width='100%'
             >
                 <Heading
                     as='h5'
+                    fontSize="2xl"
                 >
                     Scheduled commands
                 </Heading>
@@ -103,6 +103,7 @@ const CommandsQueue = () => {
                     <AccordionButton paddingLeft={0}>
                         <Heading
                             as='h5'
+                            fontSize="2xl"
                             textAlign='left'
                         >
                             Last 10 commands

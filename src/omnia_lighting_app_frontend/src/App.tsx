@@ -42,15 +42,19 @@ const App = () => {
 
   return (
     <Box
-      marginBlock="8"
-      marginInline="2"
+      marginBlock={8}
+      marginInline={{
+        base: 4,
+        lg: 8
+      }
+      }
     >
       <ChooseColorModal
         isOpen={selectedDeviceUrl !== null}
         onClose={handleDeviceModalClose}
         deviceUrl={selectedDeviceUrl!}
       />
-      <VStack spacing="6">
+      <VStack gap={8}>
         <Heading>Omnia Lighting App</Heading>
         {!devices
           ? (
@@ -88,84 +92,83 @@ const App = () => {
             </VStack>
           ) : (
             <VStack
-              w="100%"
-              gap={{
-                base: 8,
-                md: 16,
-              }}
+              gap={24}
+              width="100%"
             >
               <Stack
                 w="100%"
-                alignItems="center"
-                justifyContent={{
-                  base: "center",
-                  lg: "space-between",
-                }}
+                gap={8}
                 direction={{
                   base: "column",
                   lg: "row",
                 }}
-                gap={{
-                  base: 8,
-                  lg: 0,
-                }}
               >
-                <VStack
-                  gap="8"
-                  flexGrow={1}
-                  width="100%"
+                <Stack
+                  w="100%"
+                  alignItems="center"
+                  direction={{
+                    base: "column",
+                    lg: "column-reverse"
+                  }}
+                  gap={8}
                 >
-                  <SimpleGrid
-                    minChildWidth="10"
-                    spacing="4"
+                  <VStack
+                    gap="8"
+                    flexGrow={1}
                     width="100%"
-                    justifyItems="center"
                   >
-                    {devices.map(([deviceUrl,]) => (
-                      <Card
-                        key={deviceUrl}
-                        align="center"
-                        backgroundColor={getCardColorScheme(lastDevicesCommand[deviceUrl]?.metadata[0]?.light_color)}
-                      >
-                        <CardHeader>
-                          {getDeviceName(deviceUrl)}
-                        </CardHeader>
-                        <CardBody
-                          textAlign="center"
+                    <SimpleGrid
+                      minChildWidth="10"
+                      spacing="4"
+                      width="100%"
+                      justifyItems="center"
+                    >
+                      {devices.map(([deviceUrl,]) => (
+                        <Card
+                          key={deviceUrl}
+                          align="center"
+                          backgroundColor={getCardColorScheme(lastDevicesCommand[deviceUrl]?.metadata[0]?.light_color)}
                         >
-                          <Stack divider={<StackDivider />}>
-                            <Box>
-                              <Button
-                                aria-label="Toggle light"
-                                leftIcon={<RiLightbulbLine />}
-                                onClick={() => handleDeviceClick(deviceUrl)}
-                                colorScheme={lastDevicesCommand[deviceUrl]?.metadata[0]?.light_color}
-                                marginBottom={2}
-                              >
-                                Set color
-                              </Button>
-                            </Box>
-                            {lastDevicesCommand[deviceUrl] && (
+                          <CardHeader>
+                            {getDeviceName(deviceUrl)}
+                          </CardHeader>
+                          <CardBody
+                            textAlign="center"
+                          >
+                            <Stack divider={<StackDivider />}>
                               <Box>
-                                <Text
-                                  fontSize="sm"
-                                  fontWeight="bold"
-                                  marginBottom={1}
+                                <Button
+                                  aria-label="Toggle light"
+                                  leftIcon={<RiLightbulbLine />}
+                                  onClick={() => handleDeviceClick(deviceUrl)}
+                                  colorScheme={lastDevicesCommand[deviceUrl]?.metadata[0]?.light_color}
+                                  marginBottom={2}
                                 >
-                                  Last command by:
-                                </Text>
-                                <PrincipalDisplay principal={lastDevicesCommand[deviceUrl].sender} textLength='short' />
+                                  Set color
+                                </Button>
                               </Box>
-                            )}
-                          </Stack>
-                        </CardBody>
-                      </Card>
-                    ))}
-                  </SimpleGrid>
-                </VStack>
-                <LiveStream />
+                              {lastDevicesCommand[deviceUrl] && (
+                                <Box>
+                                  <Text
+                                    fontSize="sm"
+                                    fontWeight="bold"
+                                    marginBottom={1}
+                                  >
+                                    Last command by:
+                                  </Text>
+                                  <PrincipalDisplay principal={lastDevicesCommand[deviceUrl].sender} textLength='short' />
+                                </Box>
+                              )}
+                            </Stack>
+                          </CardBody>
+                        </Card>
+                      ))}
+                    </SimpleGrid>
+                  </VStack>
+                  <LiveStream />
+                </Stack>
+                <CommandsQueue />
               </Stack>
-              <CommandsQueue />
               <Button
                 variant="outline"
                 onClick={resetDevices}
