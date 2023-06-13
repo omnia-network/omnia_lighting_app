@@ -1,4 +1,4 @@
-import { Accordion, AccordionButton, AccordionIcon, AccordionItem, AccordionPanel, Box, Heading, Spinner, Table, TableContainer, Tag, Tbody, Td, Text, Th, Thead, Tr, VStack } from "@chakra-ui/react";
+import { Accordion, AccordionButton, AccordionIcon, AccordionItem, AccordionPanel, Box, Heading, Spinner, Table, TableContainer, Tag, Tbody, Td, Text, Th, Thead, Tr, VStack, useBreakpointValue } from "@chakra-ui/react";
 import { useMemo } from "react";
 import { DeviceCommand } from "../../../declarations/omnia_lighting_app_backend/omnia_lighting_app_backend.did";
 import { differenceInSeconds, formatISO } from "date-fns";
@@ -17,11 +17,15 @@ type CommandsRowProps = {
 export const CommandsRow: React.FC<CommandsRowProps> = ({ command, status }) => {
     const scheduleDate = useMemo(() => getDate(command.schedule_timestamp), [command.schedule_timestamp]);
     const { getDeviceName } = useDevices();
+    const principalTextLength: 'short' | 'medium' | undefined = useBreakpointValue({ base: 'short', lg: 'medium' });
 
     return (
         <Tr>
             <Td>
-                <PrincipalDisplay principal={command.sender} textLength='medium' />
+                <PrincipalDisplay
+                    principal={command.sender}
+                    textLength={principalTextLength}
+                />
             </Td>
             <Td>
                 <Tag colorScheme="purple">

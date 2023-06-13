@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Card, CardBody, CardHeader, FormControl, FormLabel, Stack, Heading, Input, SimpleGrid, Spinner, Text, VStack, Box, StackDivider } from '@chakra-ui/react';
+import { useCallback, useMemo, useState } from 'react';
+import { Button, Card, CardBody, CardHeader, FormControl, FormLabel, Stack, Heading, Input, HStack, Spinner, Text, VStack, Box, StackDivider } from '@chakra-ui/react';
 import { RiLightbulbLine } from "react-icons/ri"
 import CommandsQueue from './components/CommandsQueue';
 import ChooseColorModal from './components/ChooseColorModal';
@@ -15,15 +15,17 @@ const App = () => {
   }, []);
   const [envUid, setEnvUid] = useState<string | null>(searchParams.get("env"));
   const [selectedDeviceUrl, setSelectedDeviceUrl] = useState<string | null>(null);
+  const [isEnvInputVisible,] = useState<boolean>(!envUid);
   const { devices, isLoading, fetchDevices, resetDevices, getDeviceName } = useDevices();
   const { lastDevicesCommand } = useCommands();
 
-  const handleSubmit: React.FormEventHandler<HTMLDivElement> = useCallback(async (e) => {
-    e.preventDefault();
-
-    if (envUid) {
-      await fetchDevices(envUid);
+  const handleListDevicesClick = useCallback(async () => {
+    if (!envUid) {
+      alert("Please enter an environment unique ID");
+      return;
     }
+
+    await fetchDevices(envUid);
   }, [envUid, fetchDevices]);
 
   const handleDeviceClick = useCallback(async (deviceUrl: string) => {
@@ -33,12 +35,6 @@ const App = () => {
   const handleDeviceModalClose = useCallback(() => {
     setSelectedDeviceUrl(null);
   }, []);
-
-  useEffect(() => {
-    if (envUid) {
-      fetchDevices(envUid);
-    }
-  }, [envUid, fetchDevices]);
 
   return (
     <Box
@@ -59,31 +55,34 @@ const App = () => {
         {!devices
           ? (
             <VStack
-              as="form"
               width={{
                 base: "100%",
                 sm: "360px",
               }}
               gap={4}
               textAlign="center"
-              onSubmit={handleSubmit}
             >
-              <FormControl
-                textAlign="center"
-              >
-                <FormLabel>Environment unique ID:</FormLabel>
-                <Input
-                  value={envUid!}
-                  onChange={(e) => setEnvUid(e.target.value)}
-                  placeholder="00000000-0000-0000-0000-000000000000"
+              <Text>
+                By clicking on <b>List devices</b>, the application will query the Omnia canister to retrieve the devices it needs.
+              </Text>
+              {isEnvInputVisible && (
+                <FormControl
+                  textAlign="center"
+                >
+                  <FormLabel>Environment unique ID:</FormLabel>
+                  <Input
+                    value={envUid!}
+                    onChange={(e) => setEnvUid(e.target.value)}
+                    placeholder="00000000-0000-0000-0000-000000000000"
 
-                  required
-                />
-              </FormControl>
+                    required
+                  />
+                </FormControl>
+              )}
               <Button
-                type="submit"
                 isLoading={isLoading}
                 loadingText="Retrieving devices"
+                onClick={handleListDevicesClick}
               >
                 {
                   !isLoading ? "List devices" : <Spinner />
@@ -112,59 +111,57 @@ const App = () => {
                   }}
                   gap={8}
                 >
-                  <VStack
-                    gap="8"
+                  <HStack
                     flexGrow={1}
                     width="100%"
+                    justifyContent="center"
+                    alignItems="flex-start"
+                    gap={{
+                      base: 2,
+                      lg: 16,
+                    }}
                   >
-                    <SimpleGrid
-                      minChildWidth="10"
-                      spacing="4"
-                      width="100%"
-                      justifyItems="center"
-                    >
-                      {devices.map(([deviceUrl,]) => (
-                        <Card
-                          key={deviceUrl}
-                          align="center"
-                          backgroundColor={getCardColorScheme(lastDevicesCommand[deviceUrl]?.metadata[0]?.light_color)}
+                    {devices.map(([deviceUrl,]) => (
+                      <Card
+                        key={deviceUrl}
+                        align="center"
+                        backgroundColor={getCardColorScheme(lastDevicesCommand[deviceUrl]?.metadata[0]?.light_color)}
+                      >
+                        <CardHeader>
+                          {getDeviceName(deviceUrl)}
+                        </CardHeader>
+                        <CardBody
+                          textAlign="center"
                         >
-                          <CardHeader>
-                            {getDeviceName(deviceUrl)}
-                          </CardHeader>
-                          <CardBody
-                            textAlign="center"
-                          >
-                            <Stack divider={<StackDivider />}>
+                          <Stack divider={<StackDivider />}>
+                            <Box>
+                              <Button
+                                aria-label="Toggle light"
+                                leftIcon={<RiLightbulbLine />}
+                                onClick={() => handleDeviceClick(deviceUrl)}
+                                colorScheme={lastDevicesCommand[deviceUrl]?.metadata[0]?.light_color}
+                                marginBottom={2}
+                              >
+                                Set color
+                              </Button>
+                            </Box>
+                            {lastDevicesCommand[deviceUrl] && (
                               <Box>
-                                <Button
-                                  aria-label="Toggle light"
-                                  leftIcon={<RiLightbulbLine />}
-                                  onClick={() => handleDeviceClick(deviceUrl)}
-                                  colorScheme={lastDevicesCommand[deviceUrl]?.metadata[0]?.light_color}
-                                  marginBottom={2}
+                                <Text
+                                  fontSize="sm"
+                                  fontWeight="bold"
+                                  marginBottom={1}
                                 >
-                                  Set color
-                                </Button>
+                                  Last command by:
+                                </Text>
+                                <PrincipalDisplay principal={lastDevicesCommand[deviceUrl].sender} textLength='short' />
                               </Box>
-                              {lastDevicesCommand[deviceUrl] && (
-                                <Box>
-                                  <Text
-                                    fontSize="sm"
-                                    fontWeight="bold"
-                                    marginBottom={1}
-                                  >
-                                    Last command by:
-                                  </Text>
-                                  <PrincipalDisplay principal={lastDevicesCommand[deviceUrl].sender} textLength='short' />
-                                </Box>
-                              )}
-                            </Stack>
-                          </CardBody>
-                        </Card>
-                      ))}
-                    </SimpleGrid>
-                  </VStack>
+                            )}
+                          </Stack>
+                        </CardBody>
+                      </Card>
+                    ))}
+                  </HStack>
                   <LiveStream />
                 </Stack>
                 <CommandsQueue />
@@ -173,7 +170,7 @@ const App = () => {
                 variant="outline"
                 onClick={resetDevices}
               >
-                Change environment
+                Query devices again
               </Button>
             </VStack>
           )}

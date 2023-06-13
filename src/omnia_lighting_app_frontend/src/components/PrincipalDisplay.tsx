@@ -1,4 +1,4 @@
-import { Stack, Tag, Text, Tooltip } from "@chakra-ui/react";
+import { Badge, Stack, Text, Tooltip } from "@chakra-ui/react";
 import { Principal } from "@dfinity/principal";
 import { useAuth } from "../contexts/AuthContext";
 import { useMemo } from "react";
@@ -39,18 +39,14 @@ const PrincipalDisplay: React.FC<Props> = ({ principal, textLength }) => {
     return (
         <Stack
             direction="row"
-            flexWrap="wrap"
             alignItems="center"
         >
             <Tooltip hasArrow label={principal.toText()}>
-                <Text
-                    wordBreak="break-all"
-                    whiteSpace="break-spaces"
-                >
+                <Text>
                     {principalText}
                 </Text>
             </Tooltip>
-            {isCurrentUser && <Tag>You</Tag>}
+            {isCurrentUser && <Badge variant="outline">You</Badge>}
         </Stack>
     );
 };
