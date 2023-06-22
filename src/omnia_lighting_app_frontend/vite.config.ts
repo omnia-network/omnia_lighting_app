@@ -11,22 +11,26 @@ config({
 export default defineConfig({
   plugins: [
     react(),
-    EnvironmentPlugin([
-      ...Object.keys(process.env).filter((key) => {
-        if (key.includes("CANISTER")) return true;
-        if (key.includes("DFX")) return true;
-        return false;
-      }),
-    ]),
+    EnvironmentPlugin('all', {
+      prefix: 'CANISTER',
+    }),
+    EnvironmentPlugin('all', {
+      prefix: 'DFX',
+    }),
+    EnvironmentPlugin('all', {
+      prefix: 'INTERNET_IDENTITY',
+    }),
   ],
   server: {
     proxy: {
-      "/api": {
-        target: "http://127.0.0.1:4943",
-        changeOrigin: true,
-        rewrite(path) {
-          return path.replace(/^\/api/, '')
-        },
+      "/api": "http://127.0.0.1:4943",
+    },
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      // Node.js global to browser globalThis
+      define: {
+        global: "globalThis",
       },
     },
   },

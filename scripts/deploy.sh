@@ -11,9 +11,9 @@ if [ "$1" = "--backend" ]; then
 
   echo "Deploying only BACKEND canisters..."
 
-  dfx deploy --network http://localhost:4943 omnia_lighting_app_backend --no-wallet --argument "(\"$OMNIA_BACKEND_CANISTER_ID\")"
+  dfx deploy omnia_lighting_app_backend --no-wallet --argument "(null, \"$OMNIA_BACKEND_CANISTER_ID\")"
 else
   echo "Deploying ALL canisters..."
 
-  dfx deploy --network http://localhost:4943 --no-wallet --argument "(\"$OMNIA_BACKEND_CANISTER_ID\")"
+  dfx deploy --no-wallet --argument "(null, \"$OMNIA_BACKEND_CANISTER_ID\")"
 fi
