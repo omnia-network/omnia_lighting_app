@@ -8,9 +8,8 @@ use ic_cdk::api::{
     print, time,
 };
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
-use crate::{outcalls::transform_device_response, wot::DeviceUrl, STATE};
+use crate::{wot::DeviceUrl, STATE};
 
 /// The interval between one command and the other (in nanoseconds)
 pub const COMMANDS_INTERVAL: u64 = 15_000_000_000;
@@ -123,33 +122,35 @@ async fn execute_command(command: &DeviceCommand) {
     command.status = CommandStatus::Running;
 
     // execute the HTTPS outcall
-    let mut request = CanisterHttpRequestArgument {
+    let request = CanisterHttpRequestArgument {
         url: command.http_arguments.url,
         method: command.http_arguments.method,
         body: command.http_arguments.body,
         max_response_bytes: Some(2048), // 2KB
-        transform: Some(TransformContext::new(transform_device_response, vec![])),
+        transform: Some(TransformContext::from_name(
+            String::from("transform_device_response"),
+            vec![],
+        )),
         headers: command.http_arguments.headers,
     };
 
-    // the Idempotent-Key is required to avoid flooding the device (hence, the Gateway) with the same call from all the replicas
-    request.headers.push(HttpHeader {
-        name: String::from("Idempotent-Key"),
-        value: Uuid::new_v4().to_string(),
-    });
-
-    // toggle the device by sending the request
+    // send the HTTP request to the device
     match http_request(request).await {
         Ok((response,)) => {
             // needed just to avoid clippy warnings
             #[allow(clippy::cmp_owned)]
             if response.status >= Nat::from(200) && response.status < Nat::from(400) {
                 command.status = CommandStatus::Completed;
+            } else if response.status == Nat::from(401) {
+                // this is the case when the access key is not valid
+                print("Access key is not valid.");
+                // let's set it to None, so that the next time we'll try to get a new one
+                STATE.with(|s| {
+                    let mut state = s.borrow_mut();
+                    state.last_valid_access_key = None;
+                });
             } else {
-                print(format!(
-                    "The http_request resulted into error. Response: {response:?}"
-                ));
-                command.status = CommandStatus::Failed(format!("Status: {}", response.status));
+                command.status = CommandStatus::Failed(format!("HTTP status: {}", response.status));
             }
         }
         Err((r, m)) => {

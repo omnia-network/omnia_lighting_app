@@ -5,17 +5,25 @@ use commands::{
 };
 use ic_cdk::{
     api::{
-        management_canister::http_request::{HttpHeader, HttpMethod},
+        management_canister::{
+            http_request::{HttpHeader, HttpMethod},
+            provisional::CanisterId,
+        },
         stable::{StableReader, StableWriter},
     },
     caller, init, post_upgrade, pre_upgrade, print, query, update,
+};
+use omnia_core_sdk::{
+    access_key::{request_access_key, AccessKeyUID},
+    http::get_request_headers,
+    InitParams,
 };
 use rand::{rngs::StdRng, SeedableRng};
 use random::init_rng;
 use rdf::update_omnia_backend_canister_id;
 use rdf::{send_query, GenericError};
 use serde::Serialize;
-use std::{cell::RefCell, ops::Deref, time::Duration};
+use std::{cell::RefCell, ops::Deref, str::FromStr, time::Duration};
 use utils::get_hue_from_color;
 use uuid::Uuid;
 use wot::{DeviceUrl, WotDevices};
@@ -32,6 +40,7 @@ struct State {
     pub omnia_backend_canister_principal: Option<Principal>,
     pub wot_devices: WotDevices,
     pub device_commands: DeviceCommands,
+    pub last_valid_access_key: Option<AccessKeyUID>,
 }
 
 thread_local! {
@@ -50,13 +59,27 @@ fn start_commands_interval() {
 // `dfx deploy --argument '(null, "<omnia-backend-canister-id>")'`
 // (the null as first argument is required by the internet identity canister)
 #[init]
-fn init(_: Option<String>, omnia_backend_canister_id: String) {
+fn init(_: Option<String>, omnia_backend_canister_id: String, ledger_canister_id: String) {
     print("Init canister...");
 
     // initialize rng
     init_rng();
 
-    update_omnia_backend_canister_id(omnia_backend_canister_id);
+    update_omnia_backend_canister_id(omnia_backend_canister_id.clone());
+
+    // initialize the omnia sdk
+    RNG_REF_CELL.with(|rng_ref_cell| {
+        omnia_core_sdk::init_client(InitParams {
+            rng: rng_ref_cell.borrow_mut().clone(),
+            omnia_canister_id: Some(
+                CanisterId::from_str(&omnia_backend_canister_id)
+                    .expect("failed to parse canister id"),
+            ),
+            ledger_canister_id: Some(
+                CanisterId::from_str(&ledger_canister_id).expect("failed to parse canister id"),
+            ),
+        });
+    });
 
     start_commands_interval();
 }
@@ -184,12 +207,35 @@ async fn schedule_command(input: ScheduleCommandInput) -> Result<(), GenericErro
         .get(&input.device_url)
         .ok_or_else(|| "Device not found".to_string())?;
 
-    let headers: Vec<HttpHeader> = device
-        .clone()
-        .headers
-        .into_iter()
-        .map(|(k, v)| HttpHeader { name: k, value: v })
-        .collect();
+    // get the current access key
+    let access_key = STATE.with(|state| state.borrow().last_valid_access_key.clone());
+
+    // if access key is not there, we need to get a new one
+    let access_key = match access_key {
+        Some(access_key) => access_key,
+        None => {
+            let access_key = request_access_key().await?;
+            // store the new access key in the shared state, so that we can use it in the other calls
+            STATE.with(|state| {
+                state.borrow_mut().last_valid_access_key = Some(access_key.clone());
+            });
+            access_key
+        }
+    };
+
+    // prepare the headers for the request
+    let headers = get_request_headers(
+        access_key,
+        Some(
+            device
+                .clone()
+                .headers
+                .into_iter()
+                .map(|(k, v)| HttpHeader { name: k, value: v })
+                .collect::<Vec<HttpHeader>>(),
+        ),
+    )
+    .await?;
 
     // here we should parse the device Thing Description to get the correct endpoint
     // for now, we assume we already know it since we fetched the device with that capability
