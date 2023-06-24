@@ -1,13 +1,10 @@
 use std::collections::BTreeMap;
 
-use candid::Principal;
-use ic_cdk::api::{call::call, print};
+use ic_cdk::api::call::call;
+use omnia_core_sdk::utils::get_omnia_backend_canister_id;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    wot::{DeviceHeaders, WotDevices},
-    STATE,
-};
+use crate::wot::{DeviceHeaders, WotDevices};
 
 pub type GenericError = String;
 
@@ -61,25 +58,6 @@ fn build_query(q: &str) -> String {
     let mut query = String::from(PREFIXES);
     query.push_str(q);
     query
-}
-
-pub fn get_omnia_backend_canister_id() -> Principal {
-    STATE
-        .with(|state| state.borrow().omnia_backend_canister_principal)
-        .expect("No Database canister principal")
-}
-
-pub fn update_omnia_backend_canister_id(omnia_backend_canister_id: String) {
-    print(format!(
-        "Omnia Backend canister ID: {:?}",
-        omnia_backend_canister_id
-    ));
-
-    let remote_principal: Principal =
-        Principal::from_text(omnia_backend_canister_id).expect("Invalid Omnia Backend canister ID");
-    STATE.with(|state| {
-        state.borrow_mut().omnia_backend_canister_principal = Some(remote_principal);
-    });
 }
 
 /// Send query to RDF database using the HTTP outcall.

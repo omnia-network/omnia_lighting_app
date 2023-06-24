@@ -27,7 +27,7 @@ type ScheduleCommandInput = record {
     light_color : text;
 };
 
-service : (opt text, text) -> {
+service : (opt text, opt text, opt text) -> {
     get_devices_in_environment: (text) -> (variant { Ok : WotDevices; Err : text });
     schedule_command: (ScheduleCommandInput) -> (variant { Ok : null; Err : text });
     get_commands: () -> (DeviceCommands) query;

@@ -18,9 +18,6 @@ use omnia_core_sdk::{
     http::get_request_headers,
     InitParams,
 };
-use rand::{rngs::StdRng, SeedableRng};
-use random::init_rng;
-use rdf::update_omnia_backend_canister_id;
 use rdf::{send_query, GenericError};
 use serde::Serialize;
 use std::{cell::RefCell, ops::Deref, str::FromStr, time::Duration};
@@ -30,14 +27,12 @@ use wot::{DeviceUrl, WotDevices};
 
 mod commands;
 mod outcalls;
-mod random;
 mod rdf;
 mod utils;
 mod wot;
 
 #[derive(Default, CandidType, Serialize, Deserialize)]
 struct State {
-    pub omnia_backend_canister_principal: Option<Principal>,
     pub wot_devices: WotDevices,
     pub device_commands: DeviceCommands,
     pub last_valid_access_key: Option<AccessKeyUID>,
@@ -45,8 +40,6 @@ struct State {
 
 thread_local! {
     /* stable */ static STATE: RefCell<State>  = RefCell::new(State::default());
-    // we don't need to persist the rng in the stable memory
-    /* flexible */ static RNG_REF_CELL: RefCell<StdRng> = RefCell::new(SeedableRng::from_seed([0_u8; 32]));
 }
 
 fn start_commands_interval() {
@@ -55,30 +48,29 @@ fn start_commands_interval() {
     print("Started commands interval: 1 second");
 }
 
-// to deploy this canister with the Omnia Backend canister id as init argument, use
-// `dfx deploy --argument '(null, "<omnia-backend-canister-id>")'`
-// (the null as first argument is required by the internet identity canister)
 #[init]
-fn init(_: Option<String>, omnia_backend_canister_id: String, ledger_canister_id: String) {
+fn init(
+    _: Option<String>,
+    omnia_backend_canister_id: Option<String>,
+    ledger_canister_id: Option<String>,
+) {
     print("Init canister...");
 
-    // initialize rng
-    init_rng();
-
-    update_omnia_backend_canister_id(omnia_backend_canister_id.clone());
-
     // initialize the omnia sdk
-    RNG_REF_CELL.with(|rng_ref_cell| {
-        omnia_core_sdk::init_client(InitParams {
-            rng: rng_ref_cell.borrow_mut().clone(),
-            omnia_canister_id: Some(
+    omnia_core_sdk::init_client(InitParams {
+        omnia_canister_id: match omnia_backend_canister_id {
+            Some(omnia_backend_canister_id) => Some(
                 CanisterId::from_str(&omnia_backend_canister_id)
                     .expect("failed to parse canister id"),
             ),
-            ledger_canister_id: Some(
+            None => None,
+        },
+        ledger_canister_id: match ledger_canister_id {
+            Some(ledger_canister_id) => Some(
                 CanisterId::from_str(&ledger_canister_id).expect("failed to parse canister id"),
             ),
-        });
+            None => None,
+        },
     });
 
     start_commands_interval();
@@ -93,18 +85,34 @@ fn pre_upgrade() {
 }
 
 #[post_upgrade]
-fn post_upgrade(_: Option<String>, omnia_backend_canister_id: String) {
+fn post_upgrade(
+    _: Option<String>,
+    omnia_backend_canister_id: Option<String>,
+    ledger_canister_id: Option<String>,
+) {
     print("Post upgrade canister...");
-
-    // initialize rng
-    init_rng();
 
     STATE.with(|cell| {
         *cell.borrow_mut() =
             ciborium::de::from_reader(StableReader::default()).expect("failed to decode state");
     });
 
-    update_omnia_backend_canister_id(omnia_backend_canister_id);
+    // re-initialize the omnia sdk
+    omnia_core_sdk::init_client(InitParams {
+        omnia_canister_id: match omnia_backend_canister_id {
+            Some(omnia_backend_canister_id) => Some(
+                CanisterId::from_str(&omnia_backend_canister_id)
+                    .expect("failed to parse canister id"),
+            ),
+            None => None,
+        },
+        ledger_canister_id: match ledger_canister_id {
+            Some(ledger_canister_id) => Some(
+                CanisterId::from_str(&ledger_canister_id).expect("failed to parse canister id"),
+            ),
+            None => None,
+        },
+    });
 
     start_commands_interval();
 }
