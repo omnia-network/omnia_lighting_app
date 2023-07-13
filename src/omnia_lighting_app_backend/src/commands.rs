@@ -115,32 +115,33 @@ impl DeviceCommands {
     }
 }
 
-async fn execute_command(command: &DeviceCommand) {
+async fn execute_command(command: &DeviceCommand) -> DeviceCommand {
     print(format!("Executing command: {command:?}"));
 
-    let mut command = command.to_owned();
-    command.status = CommandStatus::Running;
+    let mut command_mut = command.clone();
+    command_mut.status = CommandStatus::Running;
 
     // execute the HTTPS outcall
     let request = CanisterHttpRequestArgument {
-        url: command.http_arguments.url,
-        method: command.http_arguments.method,
-        body: command.http_arguments.body,
+        url: command_mut.clone().http_arguments.url,
+        method: command_mut.clone().http_arguments.method,
+        body: command_mut.clone().http_arguments.body,
         max_response_bytes: Some(2048), // 2KB
         transform: Some(TransformContext::from_name(
             String::from("transform_device_response"),
             vec![],
         )),
-        headers: command.http_arguments.headers,
+        headers: command_mut.clone().http_arguments.headers,
     };
 
     // send the HTTP request to the device
-    match http_request(request).await {
+    // using 80M cycles
+    match http_request(request, 80_000_000).await {
         Ok((response,)) => {
             // needed just to avoid clippy warnings
             #[allow(clippy::cmp_owned)]
             if response.status >= Nat::from(200) && response.status < Nat::from(400) {
-                command.status = CommandStatus::Completed;
+                command_mut.status = CommandStatus::Completed;
             } else if response.status == Nat::from(401) {
                 // this is the case when the access key is not valid
                 print("Access key is not valid.");
@@ -149,8 +150,11 @@ async fn execute_command(command: &DeviceCommand) {
                     let mut state = s.borrow_mut();
                     state.last_valid_access_key = None;
                 });
+                command_mut.status =
+                    CommandStatus::Failed(String::from("Access key is not valid."));
             } else {
-                command.status = CommandStatus::Failed(format!("HTTP status: {}", response.status));
+                command_mut.status =
+                    CommandStatus::Failed(format!("HTTP status: {}", response.status));
             }
         }
         Err((r, m)) => {
@@ -158,14 +162,16 @@ async fn execute_command(command: &DeviceCommand) {
                 "The http_request resulted into error. RejectionCode: {r:?}, Error: {m}"
             ));
 
-            command.status = CommandStatus::Failed(format!("RejectionCode: {r:?}, Error: {m}"));
+            command_mut.status = CommandStatus::Failed(format!("RejectionCode: {r:?}, Error: {m}"));
         }
     };
 
     print(format!(
         "Command executed: {:?}",
-        command.schedule_timestamp
+        command_mut.schedule_timestamp
     ));
+
+    command_mut
 }
 
 pub fn commands_interval_callback() {
@@ -189,19 +195,19 @@ pub fn commands_interval_callback() {
                     .insert(command.schedule_timestamp, command.clone());
             });
 
-            execute_command(&command).await;
+            let executed_command = execute_command(&command).await;
 
             STATE.with(|s| {
                 let mut state = s.borrow_mut();
                 state
                     .device_commands
                     .running_commands
-                    .remove(&command.schedule_timestamp);
+                    .remove(&executed_command.schedule_timestamp);
 
                 state
                     .device_commands
                     .finished_commands
-                    .insert(command.schedule_timestamp, command)
+                    .insert(executed_command.schedule_timestamp, executed_command)
             });
         }
     });
