@@ -33,6 +33,8 @@ export const CommandsProvider: React.FC<Props> = ({ children }) => {
     const fetchCommands = useCallback(async () => {
         const commandsResult = await omnia_lighting_app_backend.get_commands();
 
+        console.log("fetchedCommands", commandsResult);
+
         setScheduledCommands(commandsResult.scheduled_commands);
 
         const _runningCommands = commandsResult.running_commands;
